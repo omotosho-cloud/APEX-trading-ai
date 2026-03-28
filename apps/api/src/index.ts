@@ -5,8 +5,9 @@ import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import { errorHandler } from "./middleware/error-handler.js";
 import { scheduleRecurringJobs } from "./queues.js";
-import "./workers/signal-worker.js";
-import "./workers/calendar-worker.js";
+import { signalRoutes } from "./routes/signals.js";
+import { userRoutes } from "./routes/user.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const server = Fastify({
   logger: {
@@ -35,6 +36,17 @@ async function bootstrap() {
   // Global error handler
   await errorHandler(server);
 
+  // Routes
+  try {
+    await server.register(signalRoutes);
+    await server.register(userRoutes);
+    await server.register(adminRoutes);
+    console.log("[Routes] All routes registered");
+  } catch (err) {
+    console.error("[Routes] Registration failed:", err);
+    throw err;
+  }
+
   // Health check
   server.get("/health", async () => ({
     status: "ok",
@@ -59,12 +71,23 @@ async function bootstrap() {
     },
   );
 
-  // Start BullMQ recurring jobs
-  await scheduleRecurringJobs();
+  // Start BullMQ recurring jobs (non-fatal if Redis unavailable)
+  try {
+    await scheduleRecurringJobs();
+  } catch (err) {
+    console.error("[BullMQ] Failed to schedule jobs — Redis may be unavailable:", err);
+  }
 
   // Start server
   const port = Number(process.env.PORT ?? 3001);
   await server.listen({ port, host: "0.0.0.0" });
+
+  // Start workers AFTER server is listening (prevents ECONNRESET on startup)
+  const { signalWorker } = await import("./workers/signal-worker.js");
+  const { calendarWorker } = await import("./workers/calendar-worker.js");
+  signalWorker.on("error", (err) => console.error("[SignalWorker]", err.message));
+  calendarWorker.on("error", (err) => console.error("[CalendarWorker]", err.message));
+  console.log("[Workers] Signal + Calendar workers started");
 }
 
 bootstrap().catch((err) => {

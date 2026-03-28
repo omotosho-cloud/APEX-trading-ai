@@ -15,7 +15,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@apex/types": ["../../packages/types/src/index.ts"]
+      "@apex/types": ["../../packages/types/src/index.node.ts"]
     }
   },
   "include": ["src/**/*.ts"],

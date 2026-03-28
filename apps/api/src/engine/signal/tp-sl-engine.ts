@@ -38,7 +38,7 @@ export function calculateSignalLevels(
 ): SignalLevels {
   const tfMult = TF_MULTIPLIER[timeframe] ?? 1.0;
   const atr = atrH4 * tfMult;
-  const mults = ATR_MULTIPLIERS[regime];
+  const mults = ATR_MULTIPLIERS[regime] ?? ATR_MULTIPLIERS.trending_bull;
   const spread = (TYPICAL_SPREAD[instrument] ?? 0.2) * 0.0001;
   const buffer = ENTRY_BUFFER[instrument] ?? 0.0005;
 
