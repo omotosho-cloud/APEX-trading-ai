@@ -118,7 +118,7 @@ export function calcATRSeries(bars: OHLCV[], period = 14): number[] {
 // ─── ADX + DI ────────────────────────────────────────────────────────────────
 
 export function calcADX(bars: OHLCV[], period = 14) {
-  if (bars.length < period * 2) return { adx: 0, plusDI: 0, minusDI: 0 };
+  if (bars.length < period * 2 + 1) return { adx: 0, plusDI: 0, minusDI: 0 };
 
   const plusDMs: number[] = [], minusDMs: number[] = [], trs: number[] = [];
 
@@ -131,34 +131,44 @@ export function calcADX(bars: OHLCV[], period = 14) {
     trs.push(Math.max(curr.high - curr.low, Math.abs(curr.high - prev.close), Math.abs(curr.low - prev.close)));
   }
 
-  // Wilder smoothing
-  function wilderSmooth(arr: number[], p: number): number[] {
-    const out: number[] = [arr.slice(0, p).reduce((a, b) => a + b, 0)];
-    for (let i = p; i < arr.length; i++) out.push(out[out.length - 1]! - out[out.length - 1]! / p + arr[i]!);
-    return out;
-  }
+  if (trs.length < period) return { adx: 0, plusDI: 0, minusDI: 0 };
 
-  const smoothTR = wilderSmooth(trs, period);
-  const smoothPDM = wilderSmooth(plusDMs, period);
-  const smoothMDM = wilderSmooth(minusDMs, period);
+  // Wilder smoothing: first value = sum of first N, then rolling
+  let smoothTR  = trs.slice(0, period).reduce((a, b) => a + b, 0);
+  let smoothPDM = plusDMs.slice(0, period).reduce((a, b) => a + b, 0);
+  let smoothMDM = minusDMs.slice(0, period).reduce((a, b) => a + b, 0);
 
   const dxArr: number[] = [];
-  for (let i = 0; i < smoothTR.length; i++) {
-    const tr = smoothTR[i] ?? 1;
-    const pdi = ((smoothPDM[i] ?? 0) / tr) * 100;
-    const mdi = ((smoothMDM[i] ?? 0) / tr) * 100;
-    const dx = Math.abs(pdi - mdi) / ((pdi + mdi) || 1) * 100;
-    dxArr.push(dx);
+
+  // First DX
+  const pdi0 = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
+  const mdi0 = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
+  dxArr.push(Math.abs(pdi0 - mdi0) / ((pdi0 + mdi0) || 1) * 100);
+
+  for (let i = period; i < trs.length; i++) {
+    smoothTR  = smoothTR  - smoothTR  / period + trs[i]!;
+    smoothPDM = smoothPDM - smoothPDM / period + plusDMs[i]!;
+    smoothMDM = smoothMDM - smoothMDM / period + minusDMs[i]!;
+
+    const pdi = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
+    const mdi = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
+    dxArr.push(Math.abs(pdi - mdi) / ((pdi + mdi) || 1) * 100);
   }
 
-  const adxArr = wilderSmooth(dxArr, period);
-  const last = adxArr.length - 1;
-  const tr = smoothTR[last] ?? 1;
+  // ADX = Wilder smooth of DX
+  let adx = dxArr.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < dxArr.length; i++) {
+    adx = (adx * (period - 1) + dxArr[i]!) / period;
+  }
+
+  // Final DI values
+  const pdi = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
+  const mdi = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
 
   return {
-    adx: adxArr[last] ?? 0,
-    plusDI: ((smoothPDM[last] ?? 0) / tr) * 100,
-    minusDI: ((smoothMDM[last] ?? 0) / tr) * 100,
+    adx:     Math.min(100, Math.max(0, adx)),
+    plusDI:  Math.min(100, Math.max(0, pdi)),
+    minusDI: Math.min(100, Math.max(0, mdi)),
   };
 }
 
