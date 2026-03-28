@@ -5,6 +5,8 @@ import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import { errorHandler } from "./middleware/error-handler.js";
 import { scheduleRecurringJobs } from "./queues.js";
+import "./workers/signal-worker.js";
+import "./workers/calendar-worker.js";
 
 const server = Fastify({
   logger: {
