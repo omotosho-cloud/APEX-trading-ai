@@ -36,6 +36,9 @@
       ],
       "@apex/types": [
         "../../packages/types/src/index.ts"
+      ],
+      "@/*": [
+        "./src/*"
       ]
     },
     "noEmit": true

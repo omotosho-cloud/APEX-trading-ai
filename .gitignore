@@ -27,6 +27,12 @@ Thumbs.db
 .idea
 *.swp
 
+# TypeScript build info
+*.tsbuildinfo
+
+# Misc root-level artifacts
+tsx
+
 # Testing
 coverage
 .nyc_output

@@ -1,10 +1,17 @@
+import LandingHero from "@/modules/landing/hero";
+import LandingSignalPreview from "@/modules/landing/signal-preview";
+import LandingFeatures from "@/modules/landing/features";
+import LandingPricing from "@/modules/landing/pricing";
+import LandingFooter from "@/modules/landing/footer";
+
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold text-text-primary">APEX</h1>
-        <p className="text-text-secondary">AI Trading Signals — Coming Soon</p>
-      </div>
-    </main>
+    <div className="min-h-screen bg-surface text-text-primary">
+      <LandingHero />
+      <LandingSignalPreview />
+      <LandingFeatures />
+      <LandingPricing />
+      <LandingFooter />
+    </div>
   );
 }
