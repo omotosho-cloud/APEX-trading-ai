@@ -1,0 +1,27 @@
+{
+  "name": "@apex/lib",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/core/api-client.ts",
+    "./query-keys": "./src/core/query-keys.ts",
+    "./cache-config": "./src/core/cache-config.ts",
+    "./supabase": "./src/core/supabase-client.ts",
+    "./stores": "./src/stores/index.ts"
+  },
+  "dependencies": {
+    "@apex/types": "workspace:*",
+    "@supabase/supabase-js": "^2.47.10",
+    "@tanstack/react-query": "^5.62.16",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  }
+}

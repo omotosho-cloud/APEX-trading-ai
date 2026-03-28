@@ -1,0 +1,11 @@
+export const SIGNAL_KEY = "signals" as const;
+export const REGIME_KEY = "regime" as const;
+export const USER_KEY = "user" as const;
+export const WATCHLIST_KEY = "watchlist" as const;
+export const PLANS_KEY = "plans" as const;
+export const PAYMENTS_KEY = "payments" as const;
+export const SIGNAL_HISTORY_KEY = "signal-history" as const;
+export const EXPERT_ACCURACY_KEY = "expert-accuracy" as const;
+export const CALENDAR_KEY = "calendar" as const;
+export const ADMIN_SIGNALS_KEY = "admin-signals" as const;
+export const ADMIN_USERS_KEY = "admin-users" as const;

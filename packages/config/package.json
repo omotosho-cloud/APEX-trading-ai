@@ -1,0 +1,10 @@
+{
+  "name": "@apex/config",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./tailwind": "./tailwind/index.js",
+    "./typescript": "./typescript"
+  },
+  "files": ["tailwind", "typescript"]
+}
