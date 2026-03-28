@@ -11,7 +11,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "import:historical": "tsx src/engine/import-historical.ts",
-    "backtest": "tsx src/engine/backtest.ts"
+    "backtest": "tsx src/engine/backtest.ts",
+    "test:phase3": "tsx src/engine/test-phase3.ts"
   },
   "dependencies": {
     "@apex/types": "workspace:*",
