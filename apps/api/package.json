@@ -27,12 +27,14 @@
     "drizzle-orm": "^0.38.3",
     "fastify": "^5.2.1",
     "groq-sdk": "^1.1.2",
+    "jsonwebtoken": "^9.0.3",
     "postgres": "^3.4.5",
     "ws": "^8.20.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@apex/config": "workspace:*",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.5",
     "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.30.1",

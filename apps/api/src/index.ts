@@ -83,11 +83,15 @@ async function bootstrap() {
   await server.listen({ port, host: "0.0.0.0" });
 
   // Start workers AFTER server is listening (prevents ECONNRESET on startup)
-  const { signalWorker } = await import("./workers/signal-worker.js");
-  const { calendarWorker } = await import("./workers/calendar-worker.js");
-  signalWorker.on("error", (err) => console.error("[SignalWorker]", err.message));
-  calendarWorker.on("error", (err) => console.error("[CalendarWorker]", err.message));
-  console.log("[Workers] Signal + Calendar workers started");
+  try {
+    const { signalWorker } = await import("./workers/signal-worker.js");
+    const { calendarWorker } = await import("./workers/calendar-worker.js");
+    signalWorker.on("error", (err: Error) => console.error("[SignalWorker]", err.message));
+    calendarWorker.on("error", (err: Error) => console.error("[CalendarWorker]", err.message));
+    console.log("[Workers] Signal + Calendar workers started");
+  } catch (err) {
+    console.error("[Workers] Failed to start — Redis may be unavailable:", err);
+  }
 }
 
 bootstrap().catch((err) => {
