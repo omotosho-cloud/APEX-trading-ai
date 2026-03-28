@@ -1,19 +1,7 @@
 import { Queue } from "bullmq";
+import { parseRedisUrl, REDIS_URL } from "./redis-connection.js";
 
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-
-// Parse REDIS_URL into host/port for BullMQ connection config
-function parseRedisUrl(url: string) {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: Number(parsed.port) || 6379,
-    ...(parsed.password ? { password: parsed.password } : {}),
-    maxRetriesPerRequest: null as null, // required by BullMQ
-  };
-}
-
-const connection = parseRedisUrl(redisUrl);
+const connection = parseRedisUrl(REDIS_URL);
 const queueOpts = { connection };
 
 export const signalGenerationQueue = new Queue("signal-generation", queueOpts);

@@ -1,17 +1,6 @@
 import { Worker } from "bullmq";
 import { fetchAndStoreCalendar } from "../engine/calendar/calendar-fetcher.js";
-
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-
-function parseRedisUrl(url: string) {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: Number(parsed.port) || 6379,
-    ...(parsed.password ? { password: parsed.password } : {}),
-    maxRetriesPerRequest: null as null,
-  };
-}
+import { parseRedisUrl, REDIS_URL } from "../redis-connection.js";
 
 export const calendarWorker = new Worker(
   "calendar-sync",
@@ -20,7 +9,7 @@ export const calendarWorker = new Worker(
     const count = await fetchAndStoreCalendar();
     console.log(`[CalendarWorker] Stored ${count} events`);
   },
-  { connection: parseRedisUrl(redisUrl) },
+  { connection: parseRedisUrl(REDIS_URL) },
 );
 
 calendarWorker.on("failed", (job, err) => {
