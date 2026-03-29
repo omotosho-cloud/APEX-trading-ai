@@ -6,14 +6,23 @@ import { requireAuth } from "../middleware/auth.js";
 import { UpdateUserSettingsSchema } from "@apex/types";
 
 export async function userRoutes(server: FastifyInstance) {
-  // GET /api/watchlist
-  server.get("/api/watchlist", { preHandler: requireAuth }, async (req, reply) => {
-    const rows = await db
-      .select({ instrument: userWatchlist.instrument })
-      .from(userWatchlist)
-      .where(eq(userWatchlist.user_id, req.userId));
-    return reply.send(rows.map((r) => r.instrument));
+  // OPTIONS /api/user/settings (CORS preflight)
+  server.options("/api/user/settings", async (_req, reply) => {
+    return reply.status(204).send();
   });
+
+  // GET /api/watchlist
+  server.get(
+    "/api/watchlist",
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      const rows = await db
+        .select({ instrument: userWatchlist.instrument })
+        .from(userWatchlist)
+        .where(eq(userWatchlist.user_id, req.userId));
+      return reply.send(rows.map((r) => r.instrument));
+    },
+  );
 
   // POST /api/watchlist
   server.post<{ Body: { instrument: string } }>(
@@ -47,15 +56,41 @@ export async function userRoutes(server: FastifyInstance) {
   );
 
   // GET /api/user/settings
-  server.get("/api/user/settings", { preHandler: requireAuth }, async (req, reply) => {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, req.userId))
-      .limit(1);
-    if (!user) return reply.status(404).send({ error: "User not found" });
-    return reply.send(user);
-  });
+  server.get(
+    "/api/user/settings",
+    { preHandler: requireAuth },
+    async (req, reply) => {
+      try {
+        let [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, req.userId))
+          .limit(1);
+
+        // Auto-create user if they exist in Supabase auth but not in local DB
+        if (!user) {
+          req.log.info(`Auto-creating user ${req.userId} in local database`);
+          const [newUser] = await db
+            .insert(users)
+            .values({
+              id: req.userId,
+              email:
+                (req.headers["x-user-email"] as string) ?? "user@example.com",
+              subscription_status: "trial",
+            })
+            .returning();
+          user = newUser;
+        }
+
+        return reply.send(user);
+      } catch (error) {
+        req.log.error(
+          `Error fetching user settings: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        throw error;
+      }
+    },
+  );
 
   // PATCH /api/user/settings
   server.patch(
@@ -66,9 +101,15 @@ export async function userRoutes(server: FastifyInstance) {
       const [updated] = await db
         .update(users)
         .set({
-          ...(body.account_size !== undefined && { account_size: body.account_size?.toString() ?? null }),
-          ...(body.risk_pct !== undefined && { risk_pct: body.risk_pct.toString() }),
-          ...(body.preferred_pairs !== undefined && { preferred_pairs: body.preferred_pairs }),
+          ...(body.account_size !== undefined && {
+            account_size: body.account_size?.toString() ?? null,
+          }),
+          ...(body.risk_pct !== undefined && {
+            risk_pct: body.risk_pct.toString(),
+          }),
+          ...(body.preferred_pairs !== undefined && {
+            preferred_pairs: body.preferred_pairs,
+          }),
           updated_at: new Date(),
         })
         .where(eq(users.id, req.userId))
@@ -79,10 +120,7 @@ export async function userRoutes(server: FastifyInstance) {
 
   // GET /api/plans
   server.get("/api/plans", async (_req, reply) => {
-    const rows = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.is_active, true));
+    const rows = await db.select().from(plans).where(eq(plans.is_active, true));
     return reply.send(rows);
   });
 }

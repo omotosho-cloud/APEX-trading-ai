@@ -8,6 +8,7 @@ import { scheduleRecurringJobs } from "./queues.js";
 import { signalRoutes } from "./routes/signals.js";
 import { userRoutes } from "./routes/user.js";
 import { adminRoutes } from "./routes/admin.js";
+import { wsRoute } from "./routes/ws.js";
 
 const server = Fastify({
   logger: {
@@ -41,6 +42,7 @@ async function bootstrap() {
     await server.register(signalRoutes);
     await server.register(userRoutes);
     await server.register(adminRoutes);
+    await server.register(wsRoute);
     console.log("[Routes] All routes registered");
   } catch (err) {
     console.error("[Routes] Registration failed:", err);
@@ -53,21 +55,27 @@ async function bootstrap() {
     timestamp: new Date().toISOString(),
   }));
 
-  // CRON-protected internal trigger (used by scheduler to kick signal generation)
+  // Manual signal trigger for testing (CRON_SECRET protected)
   server.post(
     "/internal/trigger-signals",
-    {
-      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
-    },
+    { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const secret = request.headers["x-cron-secret"];
       if (secret !== process.env.CRON_SECRET) {
         return reply.status(401).send({ error: "Unauthorized" });
       }
-      // Signal generation is handled by BullMQ scheduler — this is a manual trigger
-      const { signalGenerationQueue } = await import("./queues.js");
-      await signalGenerationQueue.add("generate-signals-manual", {});
-      return { queued: true };
+      const { runSignalPipeline } = await import("./engine/signal/signal-pipeline.js");
+      const { ALL_INSTRUMENTS, ALL_TIMEFRAMES } = await import("./engine/market-data/instruments.js");
+      let fired = 0;
+      await Promise.allSettled(
+        ALL_INSTRUMENTS.flatMap((inst) =>
+          ALL_TIMEFRAMES.map(async (tf) => {
+            const r = await runSignalPipeline(inst, tf);
+            if (r.fired) fired++;
+          }),
+        ),
+      );
+      return { queued: true, fired };
     },
   );
 

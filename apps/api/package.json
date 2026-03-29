@@ -12,13 +12,18 @@
     "db:seed": "tsx src/db/seed.ts",
     "import:historical": "tsx src/engine/import-historical.ts",
     "backtest": "tsx src/engine/backtest.ts",
-    "test:phase3": "tsx src/engine/test-phase3.ts"
+    "test:phase3": "tsx src/engine/test-phase3.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "vitest run tests/e2e.test.ts",
+    "test:signal": "vitest run tests/signal-pipeline.test.ts"
   },
   "dependencies": {
     "@apex/types": "workspace:*",
     "@fastify/cors": "^10.0.1",
     "@fastify/jwt": "^9.0.1",
     "@fastify/rate-limit": "^10.2.1",
+    "@fastify/websocket": "^11.2.0",
     "@supabase/supabase-js": "^2.47.10",
     "@upstash/redis": "^1.34.3",
     "axios": "^1.14.0",
@@ -37,8 +42,10 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.5",
     "@types/ws": "^8.18.1",
+    "@vitest/ui": "^1.6.0",
     "drizzle-kit": "^0.30.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^1.6.0"
   }
 }
