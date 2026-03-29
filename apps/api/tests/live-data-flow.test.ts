@@ -82,18 +82,28 @@ describe("Live Data Feed Architecture", () => {
       "AUDUSD",
       "USDCAD",
       "NZDUSD",
+      "EURGBP",
+      "EURJPY",
+      "GBPJPY",
       "BTCUSDT",
       "ETHUSDT",
       "BNBUSDT",
-      "XRPUSDT",
       "SOLUSDT",
-      "ADAUSDT",
+      "XRPUSDT",
     ]);
 
-    expect(ALL_TIMEFRAMES).toEqual(["H1", "H4", "D1"]);
+    expect(ALL_TIMEFRAMES).toEqual([
+      "M5",
+      "M15",
+      "M30",
+      "H1",
+      "H4",
+      "D1",
+      "W1",
+    ]);
 
-    // Total combinations: 13 instruments × 3 timeframes = 39 signal pipelines
-    expect(ALL_INSTRUMENTS.length * ALL_TIMEFRAMES.length).toBe(39);
+    // Total combinations: 15 instruments × 7 timeframes = 105 signal pipelines
+    expect(ALL_INSTRUMENTS.length * ALL_TIMEFRAMES.length).toBe(105);
   });
 
   it("documents expert system voting architecture", () => {

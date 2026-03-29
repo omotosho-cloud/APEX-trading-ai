@@ -9,6 +9,7 @@ import { signalRoutes } from "./routes/signals.js";
 import { userRoutes } from "./routes/user.js";
 import { adminRoutes } from "./routes/admin.js";
 import { wsRoute } from "./routes/ws.js";
+import { paperTradingRoutes } from "./routes/paper-trading.js";
 
 const server = Fastify({
   logger: {
@@ -25,7 +26,11 @@ async function bootstrap() {
 
   // JWT (used for CRON_SECRET verification on internal endpoints)
   await server.register(jwt, {
-    secret: process.env.JWT_SECRET ?? (() => { throw new Error("JWT_SECRET is required"); })(),
+    secret:
+      process.env.JWT_SECRET ??
+      (() => {
+        throw new Error("JWT_SECRET is required");
+      })(),
   });
 
   // Rate limiting — 100 req/min per IP
@@ -43,6 +48,7 @@ async function bootstrap() {
     await server.register(userRoutes);
     await server.register(adminRoutes);
     await server.register(wsRoute);
+    await server.register(paperTradingRoutes);
     console.log("[Routes] All routes registered");
   } catch (err) {
     console.error("[Routes] Registration failed:", err);
@@ -64,8 +70,10 @@ async function bootstrap() {
       if (secret !== process.env.CRON_SECRET) {
         return reply.status(401).send({ error: "Unauthorized" });
       }
-      const { runSignalPipeline } = await import("./engine/signal/signal-pipeline.js");
-      const { ALL_INSTRUMENTS, ALL_TIMEFRAMES } = await import("./engine/market-data/instruments.js");
+      const { runSignalPipeline } =
+        await import("./engine/signal/signal-pipeline.js");
+      const { ALL_INSTRUMENTS, ALL_TIMEFRAMES } =
+        await import("./engine/market-data/instruments.js");
       let fired = 0;
       await Promise.allSettled(
         ALL_INSTRUMENTS.flatMap((inst) =>
@@ -83,7 +91,10 @@ async function bootstrap() {
   try {
     await scheduleRecurringJobs();
   } catch (err) {
-    console.error("[BullMQ] Failed to schedule jobs — Redis may be unavailable:", err);
+    console.error(
+      "[BullMQ] Failed to schedule jobs — Redis may be unavailable:",
+      err,
+    );
   }
 
   // Start server
@@ -94,11 +105,27 @@ async function bootstrap() {
   try {
     const { signalWorker } = await import("./workers/signal-worker.js");
     const { calendarWorker } = await import("./workers/calendar-worker.js");
-    signalWorker.on("error", (err: Error) => console.error("[SignalWorker]", err.message));
-    calendarWorker.on("error", (err: Error) => console.error("[CalendarWorker]", err.message));
+    signalWorker.on("error", (err: Error) =>
+      console.error("[SignalWorker]", err.message),
+    );
+    calendarWorker.on("error", (err: Error) =>
+      console.error("[CalendarWorker]", err.message),
+    );
     console.log("[Workers] Signal + Calendar workers started");
   } catch (err) {
     console.error("[Workers] Failed to start — Redis may be unavailable:", err);
+  }
+
+  // Start real-time market data feed (Binance WebSocket + Twelve Data API)
+  try {
+    const { startRealTimeFeed } = await import("./engine/market-data/feed.js");
+
+    startRealTimeFeed();
+    console.log(
+      "[Feed] Real-time data feed started — Binance WebSocket + Twelve Data API",
+    );
+  } catch (err) {
+    console.error("[Feed] Failed to start real-time feed:", err);
   }
 }
 
