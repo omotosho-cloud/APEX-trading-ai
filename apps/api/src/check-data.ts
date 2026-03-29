@@ -10,25 +10,30 @@ const result = await tsdb
     count: sql<string>`COUNT(*)`,
     min_time: sql<string>`MIN(time)`,
     max_time: sql<string>`MAX(time)`,
+    years: sql<string>`ROUND(EXTRACT(EPOCH FROM (MAX(time) - MIN(time))) / 86400 / 365, 1)`,
   })
   .from(candles)
   .groupBy(candles.instrument, candles.timeframe)
   .orderBy(candles.instrument, candles.timeframe);
 
-console.log("\n═══════════════════════════════════════════════════");
-console.log("   Historical Candle Data Summary");
-console.log("═══════════════════════════════════════════════════\n");
+console.log("\n" + "═".repeat(80));
+console.log("   APEX — Full DB Candle Inventory");
+console.log("═".repeat(80));
+console.log(`${ "Pair/TF".padEnd(16) } ${ "Count".padStart(7) }  ${ "Years".padStart(5) }  From         → To`);
+console.log("─".repeat(80));
 
 for (const row of result) {
-  const count = Number(row.count);
-  console.log(
-    `${row.instrument}/${row.timeframe}`.padEnd(15) +
-      ` | Count: ${String(count).padStart(6)} | ` +
-      `${row.min_time} → ${row.max_time}`,
-  );
+  const key = `${row.instrument}/${row.timeframe}`;
+  const from = row.min_time.slice(0, 10);
+  const to   = row.max_time.slice(0, 10);
+  const count = Number(row.count).toLocaleString();
+  const years = row.years;
+  const flag = Number(years) >= 3 ? "✅" : Number(years) >= 1 ? "⚠️ " : "❌";
+  console.log(`${flag} ${key.padEnd(15)} ${count.padStart(7)}  ${String(years).padStart(5)}y  ${from} → ${to}`);
 }
 
-console.log("\n✅ Total rows with data:", result.length);
-console.log(
-  "\n💡 Note: You need 250+ candles per pair/timeframe for backtesting\n",
-);
+console.log("─".repeat(80));
+console.log(`\nTotal combinations: ${result.length}`);
+console.log(`✅ = 3+ years  ⚠️  = 1-3 years  ❌ = <1 year\n`);
+
+process.exit(0);

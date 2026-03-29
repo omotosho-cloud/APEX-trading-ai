@@ -56,6 +56,7 @@ export async function runSignalPipeline(
     instrument, timeframe,
     indicators.adx, indicators.hurst, indicators.atrRatio,
     indicators.bbBandwidth, indicators.structureScore, indicators.efficiencyRatio,
+    indicators.plusDI, indicators.minusDI,
   );
 
   if (regimeResult.regime === "choppy") {
@@ -97,6 +98,11 @@ export async function runSignalPipeline(
   };
 
   // ── 12-13. CONSENSUS with sanity cap ──────────────────────────────────────
+  // breakout_imminent uses lower threshold — regime itself is the primary signal
+  const consensusThreshold = regimeResult.regime === "breakout_imminent" ? 40
+    : regimeResult.regime === "volatile" ? 55
+    : 60;
+
   let buyScore = 0, sellScore = 0;
   for (const [name, vote] of Object.entries(expertVotes)) {
     const w = weights[name as keyof typeof weights] ?? 0;
@@ -107,9 +113,9 @@ export async function runSignalPipeline(
   let direction: Direction;
   let rawConfidence: number;
 
-  if (buyScore > sellScore && buyScore > 60) {
+  if (buyScore > sellScore && buyScore > consensusThreshold) {
     direction = "buy"; rawConfidence = Math.round(buyScore);
-  } else if (sellScore > buyScore && sellScore > 60) {
+  } else if (sellScore > buyScore && sellScore > consensusThreshold) {
     direction = "sell"; rawConfidence = Math.round(sellScore);
   } else {
     return { fired: false, reason: "no consensus direction" };
@@ -132,7 +138,7 @@ export async function runSignalPipeline(
   );
 
   if (!levels.passes) {
-    return { fired: false, reason: `R:R ${levels.rrRatio} below 1.5 minimum` };
+    return { fired: false, reason: `R:R ${levels.rrRatio} below 0.9 minimum` };
   }
 
   // ── 14. DELIBERATION ─────────────────────────────────────────────────────

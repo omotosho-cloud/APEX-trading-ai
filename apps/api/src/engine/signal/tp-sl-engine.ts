@@ -52,15 +52,18 @@ export function calculateSignalLevels(
     ? (isBuy ? entryPrice + atr * mults.tp3 : entryPrice - atr * mults.tp3)
     : null;
 
-  // Slippage-adjusted R:R using worst-case entry
-  const worstEntry = isBuy ? entryPrice + buffer : entryPrice - buffer;
-  const tpDist = Math.abs(tp1Price - worstEntry);
-  const slDist = Math.abs(slPrice - worstEntry);
+  // R:R calculated from actual entry (not worst-case buffer — buffer is for expiry check only)
+  const tpDist = Math.abs(tp1Price - entryPrice);
+  const slDist = Math.abs(slPrice - entryPrice);
   const rrRatio = slDist > 0 ? Math.round((tpDist / slDist) * 100) / 100 : 0;
 
   // Hard expiry: current_time + (ATR × 2) hours, capped at 24h
   const validityHours = Math.min(24, (atr * 2) / (atr / 4));
   const validUntil = new Date(Date.now() + validityHours * 3_600_000);
+
+  // Minimum RR at TP1 — trending SL=1.5x TP1=1.5x gives RR=1.0 by design
+  // Real edge is at TP2 (2.0 RR) and TP3 (3.3 RR)
+  const minRR = 0.9;
 
   return {
     entryPrice,
@@ -72,7 +75,7 @@ export function calculateSignalLevels(
     atrValue: atr,
     rrRatio,
     validUntil,
-    passes: rrRatio >= 1.5,
+    passes: rrRatio >= minRR,
   };
 }
 

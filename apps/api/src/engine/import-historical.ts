@@ -34,6 +34,17 @@ async function getLastCandleTime(
   return result[0]?.maxTime ?? null;
 }
 
+// How many days per page per timeframe (keeps each request under 5000 candles)
+const DAYS_PER_PAGE: Record<string, number> = {
+  M5:  17,   // 5000 / (288 candles/day)
+  M15: 50,   // 5000 / (96 candles/day)
+  M30: 100,  // 5000 / (48 candles/day)
+  H1:  200,  // 5000 / (24 candles/day)
+  H4:  800,  // 5000 / (6 candles/day)
+  D1:  5000, // 1 candle/day — full 5 years in one shot
+  W1:  5000, // 1 candle/week — full 5 years in one shot
+};
+
 async function importInstrument(instrument: string, timeframe: string) {
   const symbol = TWELVE_DATA_SYMBOL[instrument];
   const interval = TWELVE_DATA_INTERVAL[timeframe];
@@ -45,35 +56,60 @@ async function importInstrument(instrument: string, timeframe: string) {
 
   // Resume from last imported candle if exists
   const lastTime = await getLastCandleTime(instrument, timeframe);
-  const startDate = lastTime
-    ? new Date(new Date(lastTime).getTime() + 60_000).toISOString().split("T")[0]!
-    : getStartDate();
+  let cursor = lastTime
+    ? new Date(new Date(lastTime).getTime() + 60_000)
+    : new Date(getStartDate());
 
-  const values = await fetchTimeSeries(symbol, interval, 5000, startDate);
+  const now = new Date();
+  const daysPerPage = DAYS_PER_PAGE[timeframe] ?? 200;
+  let total = 0;
 
-  if (values.length === 0) return 0;
+  while (cursor < now) {
+    const pageEnd = new Date(cursor);
+    pageEnd.setDate(pageEnd.getDate() + daysPerPage);
+    if (pageEnd > now) pageEnd.setTime(now.getTime());
 
-  const rows = values.map((c) => ({
-    time: new Date(c.datetime),
-    instrument,
-    timeframe,
-    open: c.open,
-    high: c.high,
-    low: c.low,
-    close: c.close,
-    volume: c.volume ?? "0",
-  }));
+    const startDate = cursor.toISOString().split("T")[0]!;
+    const endDate   = pageEnd.toISOString().split("T")[0]!;
 
-  // Batch insert in chunks of 500 to avoid query size limits
-  const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    await tsdb
-      .insert(candles)
-      .values(rows.slice(i, i + CHUNK))
-      .onConflictDoNothing();
+    const values = await fetchTimeSeries(symbol, interval, 5000, startDate, endDate);
+
+    if (values.length === 0) {
+      // No data in this window — advance cursor and continue
+      cursor = new Date(pageEnd.getTime() + 60_000);
+      continue;
+    }
+
+    const rows = values.map((c) => ({
+      time: new Date(c.datetime),
+      instrument,
+      timeframe,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume ?? "0",
+    }));
+
+    const CHUNK = 500;
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      await tsdb
+        .insert(candles)
+        .values(rows.slice(i, i + CHUNK))
+        .onConflictDoNothing();
+    }
+
+    total += rows.length;
+
+    // Advance cursor past the last candle we received
+    const lastCandle = values[values.length - 1]!;
+    cursor = new Date(new Date(lastCandle.datetime).getTime() + 60_000);
+
+    // Rate limit between pages of the same instrument
+    if (cursor < now) await sleep(RATE_LIMIT_MS);
   }
 
-  return rows.length;
+  return total;
 }
 
 async function runImport() {
@@ -95,7 +131,7 @@ async function runImport() {
       try {
         const count = await importInstrument(instrument, timeframe);
         total += count;
-        console.log(`${count} candles`);
+        console.log(`${count} candles imported`);
       } catch (err) {
         console.error(`FAILED — ${err instanceof Error ? err.message : err}`);
       }

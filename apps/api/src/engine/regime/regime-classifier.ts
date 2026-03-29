@@ -43,13 +43,15 @@ export function detectSession(): Session {
 
 // ─── Core classifier (exact cascade from master prompt) ──────────────────────
 
-function classifyRaw(
+export function classifyRaw(
   adx: number,
   hurst: number,
   atrRatio: number,
   bbBandwidth: number,
   structureScore: number,
   efficiencyRatio: number,
+  plusDI = 0,
+  minusDI = 0,
 ): { regime: Regime; confidence: number } {
   // Priority 1: Extreme volatility
   if (atrRatio > 1.80) {
@@ -75,15 +77,21 @@ function classifyRaw(
     else if (hurst > 0.55) conf = Math.min(95, conf + 4);
     else if (hurst < 0.45) conf = Math.max(50, conf - 12);
 
-    const regime: Regime = structureScore >= 7 ? "trending_bull" : "trending_bear";
+    // structureScore 7-9 = bull, 1-3 = bear, 6 = expanding (use DI to decide)
+    const regime: Regime = structureScore >= 7
+      ? "trending_bull"
+      : structureScore <= 3
+        ? "trending_bear"
+        : (plusDI > minusDI ? "trending_bull" : "trending_bear");
+
     return { regime, confidence: conf };
   }
 
-  // Priority 4: Confirmed range
-  if (adx < 22 && hurst < 0.50 && structureScore <= 4) {
+  // Priority 4: Confirmed range — contracting structure (score 4) or flat (score 5) with low ADX
+  if (adx < 25 && hurst < 0.52 && structureScore <= 5) {
     return {
       regime: "ranging",
-      confidence: Math.min(90, 60 + Math.floor((22 - adx) * 1.5) + (5 - structureScore) * 4),
+      confidence: Math.min(90, 60 + Math.floor((25 - adx) * 1.2) + (5 - structureScore) * 3),
     };
   }
 
@@ -102,6 +110,8 @@ export function classifyRegime(
   bbBandwidth: number,
   structureScore: number,
   efficiencyRatio: number,
+  plusDI = 0,
+  minusDI = 0,
 ): RegimeResult {
   const key = `${instrument}:${timeframe}`;
   const window = HYSTERESIS_WINDOW[timeframe] ?? 4;
@@ -109,7 +119,7 @@ export function classifyRegime(
   const sessionMultiplier = SESSION_MULTIPLIERS[session];
 
   const { regime: rawRegime, confidence: rawConf } = classifyRaw(
-    adx, hurst, atrRatio, bbBandwidth, structureScore, efficiencyRatio,
+    adx, hurst, atrRatio, bbBandwidth, structureScore, efficiencyRatio, plusDI, minusDI,
   );
 
   // Record for hysteresis
