@@ -1,0 +1,890 @@
+{
+  "results": [
+    {
+      "instrument": "EURUSD",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 170,
+        "wins": 95,
+        "winRate": 55.9,
+        "sharpe": 2.41,
+        "maxDrawdown": 16.6,
+        "profitFactor": 1.36,
+        "expectancy": 0.16,
+        "totalR": 0.27,
+        "profitableMonths": 22,
+        "totalMonths": 43
+      },
+      "outOfSample": {
+        "trades": 45,
+        "wins": 25,
+        "winRate": 55.6,
+        "sharpe": 1.93,
+        "maxDrawdown": 7.8,
+        "profitFactor": 1.27,
+        "expectancy": 0.12,
+        "totalR": 0.06,
+        "profitableMonths": 4,
+        "totalMonths": 9
+      },
+      "combined": {
+        "trades": 215,
+        "wins": 120,
+        "winRate": 55.8,
+        "sharpe": 2.31,
+        "maxDrawdown": 16.6,
+        "profitFactor": 1.34,
+        "expectancy": 0.15,
+        "totalR": 0.32,
+        "profitableMonths": 26,
+        "totalMonths": 52
+      },
+      "passes": true,
+      "strongOOS": false
+    },
+    {
+      "instrument": "GBPUSD",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 157,
+        "wins": 72,
+        "winRate": 45.9,
+        "sharpe": -1.13,
+        "maxDrawdown": 25.1,
+        "profitFactor": 0.87,
+        "expectancy": -0.08,
+        "totalR": -0.11,
+        "profitableMonths": 10,
+        "totalMonths": 44
+      },
+      "outOfSample": {
+        "trades": 27,
+        "wins": 20,
+        "winRate": 74.1,
+        "sharpe": 8.72,
+        "maxDrawdown": 2,
+        "profitFactor": 2.86,
+        "expectancy": 0.48,
+        "totalR": 0.13,
+        "profitableMonths": 9,
+        "totalMonths": 13
+      },
+      "combined": {
+        "trades": 184,
+        "wins": 92,
+        "winRate": 50,
+        "sharpe": 0.15,
+        "maxDrawdown": 25.1,
+        "profitFactor": 1.02,
+        "expectancy": 0.01,
+        "totalR": 0.02,
+        "profitableMonths": 19,
+        "totalMonths": 57
+      },
+      "passes": false,
+      "strongOOS": true
+    },
+    {
+      "instrument": "USDJPY",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 171,
+        "wins": 97,
+        "winRate": 56.7,
+        "sharpe": 2.43,
+        "maxDrawdown": 15,
+        "profitFactor": 1.36,
+        "expectancy": 0.15,
+        "totalR": 0.27,
+        "profitableMonths": 23,
+        "totalMonths": 46
+      },
+      "outOfSample": {
+        "trades": 28,
+        "wins": 17,
+        "winRate": 60.7,
+        "sharpe": 3.48,
+        "maxDrawdown": 3.9,
+        "profitFactor": 1.55,
+        "expectancy": 0.21,
+        "totalR": 0.06,
+        "profitableMonths": 7,
+        "totalMonths": 11
+      },
+      "combined": {
+        "trades": 199,
+        "wins": 114,
+        "winRate": 57.3,
+        "sharpe": 2.57,
+        "maxDrawdown": 15,
+        "profitFactor": 1.38,
+        "expectancy": 0.16,
+        "totalR": 0.33,
+        "profitableMonths": 30,
+        "totalMonths": 57
+      },
+      "passes": true,
+      "strongOOS": false
+    },
+    {
+      "instrument": "USDCHF",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 144,
+        "wins": 87,
+        "winRate": 60.4,
+        "sharpe": 3.47,
+        "maxDrawdown": 5.9,
+        "profitFactor": 1.54,
+        "expectancy": 0.22,
+        "totalR": 0.31,
+        "profitableMonths": 21,
+        "totalMonths": 43
+      },
+      "outOfSample": {
+        "trades": 41,
+        "wins": 21,
+        "winRate": 51.2,
+        "sharpe": 0.71,
+        "maxDrawdown": 5.2,
+        "profitFactor": 1.11,
+        "expectancy": 0.02,
+        "totalR": 0.02,
+        "profitableMonths": 6,
+        "totalMonths": 13
+      },
+      "combined": {
+        "trades": 185,
+        "wins": 108,
+        "winRate": 58.4,
+        "sharpe": 2.85,
+        "maxDrawdown": 5.9,
+        "profitFactor": 1.43,
+        "expectancy": 0.17,
+        "totalR": 0.33,
+        "profitableMonths": 27,
+        "totalMonths": 56
+      },
+      "passes": true,
+      "strongOOS": false
+    },
+    {
+      "instrument": "NZDUSD",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 111,
+        "wins": 61,
+        "winRate": 55,
+        "sharpe": 1.83,
+        "maxDrawdown": 9.8,
+        "profitFactor": 1.27,
+        "expectancy": 0.11,
+        "totalR": 0.13,
+        "profitableMonths": 17,
+        "totalMonths": 37
+      },
+      "outOfSample": {
+        "trades": 20,
+        "wins": 13,
+        "winRate": 65,
+        "sharpe": 4.99,
+        "maxDrawdown": 3,
+        "profitFactor": 1.86,
+        "expectancy": 0.3,
+        "totalR": 0.06,
+        "profitableMonths": 7,
+        "totalMonths": 11
+      },
+      "combined": {
+        "trades": 131,
+        "wins": 74,
+        "winRate": 56.5,
+        "sharpe": 2.29,
+        "maxDrawdown": 9.8,
+        "profitFactor": 1.34,
+        "expectancy": 0.14,
+        "totalR": 0.19,
+        "profitableMonths": 24,
+        "totalMonths": 48
+      },
+      "passes": true,
+      "strongOOS": false
+    },
+    {
+      "instrument": "EURGBP",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 128,
+        "wins": 73,
+        "winRate": 57,
+        "sharpe": 2.44,
+        "maxDrawdown": 9.6,
+        "profitFactor": 1.37,
+        "expectancy": 0.15,
+        "totalR": 0.2,
+        "profitableMonths": 20,
+        "totalMonths": 40
+      },
+      "outOfSample": {
+        "trades": 37,
+        "wins": 18,
+        "winRate": 48.6,
+        "sharpe": -0.43,
+        "maxDrawdown": 7.8,
+        "profitFactor": 0.95,
+        "expectancy": -0.03,
+        "totalR": -0.01,
+        "profitableMonths": 5,
+        "totalMonths": 13
+      },
+      "combined": {
+        "trades": 165,
+        "wins": 91,
+        "winRate": 55.2,
+        "sharpe": 1.79,
+        "maxDrawdown": 9.6,
+        "profitFactor": 1.26,
+        "expectancy": 0.11,
+        "totalR": 0.19,
+        "profitableMonths": 25,
+        "totalMonths": 53
+      },
+      "passes": false,
+      "strongOOS": false
+    },
+    {
+      "instrument": "EURJPY",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 166,
+        "wins": 90,
+        "winRate": 54.2,
+        "sharpe": 1.64,
+        "maxDrawdown": 14,
+        "profitFactor": 1.23,
+        "expectancy": 0.1,
+        "totalR": 0.17,
+        "profitableMonths": 25,
+        "totalMonths": 47
+      },
+      "outOfSample": {
+        "trades": 32,
+        "wins": 14,
+        "winRate": 43.8,
+        "sharpe": -1.23,
+        "maxDrawdown": 11.6,
+        "profitFactor": 0.88,
+        "expectancy": -0.12,
+        "totalR": -0.02,
+        "profitableMonths": 4,
+        "totalMonths": 13
+      },
+      "combined": {
+        "trades": 198,
+        "wins": 104,
+        "winRate": 52.5,
+        "sharpe": 1.19,
+        "maxDrawdown": 14,
+        "profitFactor": 1.17,
+        "expectancy": 0.06,
+        "totalR": 0.15,
+        "profitableMonths": 29,
+        "totalMonths": 60
+      },
+      "passes": false,
+      "strongOOS": false
+    },
+    {
+      "instrument": "GBPJPY",
+      "dataYears": 6.2,
+      "inSample": {
+        "trades": 182,
+        "wins": 96,
+        "winRate": 52.7,
+        "sharpe": 0.87,
+        "maxDrawdown": 14.2,
+        "profitFactor": 1.12,
+        "expectancy": 0.05,
+        "totalR": 0.1,
+        "profitableMonths": 22,
+        "totalMonths": 49
+      },
+      "outOfSample": {
+        "trades": 33,
+        "wins": 17,
+        "winRate": 51.5,
+        "sharpe": 0.48,
+        "maxDrawdown": 5.9,
+        "profitFactor": 1.06,
+        "expectancy": 0.03,
+        "totalR": 0.01,
+        "profitableMonths": 6,
+        "totalMonths": 15
+      },
+      "combined": {
+        "trades": 215,
+        "wins": 113,
+        "winRate": 52.6,
+        "sharpe": 0.81,
+        "maxDrawdown": 14.2,
+        "profitFactor": 1.11,
+        "expectancy": 0.05,
+        "totalR": 0.11,
+        "profitableMonths": 28,
+        "totalMonths": 64
+      },
+      "passes": false,
+      "strongOOS": false
+    }
+  ],
+  "monthly": [
+    {
+      "month": "2020-02",
+      "trades": 2,
+      "wins": 2,
+      "winRate": 100,
+      "totalR": 2
+    },
+    {
+      "month": "2020-03",
+      "trades": 41,
+      "wins": 29,
+      "winRate": 70.7,
+      "totalR": 17
+    },
+    {
+      "month": "2020-04",
+      "trades": 14,
+      "wins": 5,
+      "winRate": 35.7,
+      "totalR": -4
+    },
+    {
+      "month": "2020-05",
+      "trades": 23,
+      "wins": 17,
+      "winRate": 73.9,
+      "totalR": 11
+    },
+    {
+      "month": "2020-06",
+      "trades": 36,
+      "wins": 19,
+      "winRate": 52.8,
+      "totalR": 3
+    },
+    {
+      "month": "2020-07",
+      "trades": 44,
+      "wins": 29,
+      "winRate": 65.9,
+      "totalR": 14.5
+    },
+    {
+      "month": "2020-08",
+      "trades": 20,
+      "wins": 5,
+      "winRate": 25,
+      "totalR": -10
+    },
+    {
+      "month": "2020-09",
+      "trades": 18,
+      "wins": 4,
+      "winRate": 22.2,
+      "totalR": -9.5
+    },
+    {
+      "month": "2020-10",
+      "trades": 8,
+      "wins": 5,
+      "winRate": 62.5,
+      "totalR": 2
+    },
+    {
+      "month": "2020-11",
+      "trades": 36,
+      "wins": 17,
+      "winRate": 47.2,
+      "totalR": -1.5
+    },
+    {
+      "month": "2020-12",
+      "trades": 22,
+      "wins": 11,
+      "winRate": 50,
+      "totalR": 0.5
+    },
+    {
+      "month": "2021-01",
+      "trades": 11,
+      "wins": 5,
+      "winRate": 45.5,
+      "totalR": -1
+    },
+    {
+      "month": "2021-02",
+      "trades": 36,
+      "wins": 20,
+      "winRate": 55.6,
+      "totalR": 4.5
+    },
+    {
+      "month": "2021-03",
+      "trades": 32,
+      "wins": 20,
+      "winRate": 62.5,
+      "totalR": 8.5
+    },
+    {
+      "month": "2021-04",
+      "trades": 18,
+      "wins": 6,
+      "winRate": 33.3,
+      "totalR": -6
+    },
+    {
+      "month": "2021-05",
+      "trades": 16,
+      "wins": 0,
+      "winRate": 0,
+      "totalR": -16
+    },
+    {
+      "month": "2021-06",
+      "trades": 7,
+      "wins": 3,
+      "winRate": 42.9,
+      "totalR": -0.5
+    },
+    {
+      "month": "2021-07",
+      "trades": 8,
+      "wins": 3,
+      "winRate": 37.5,
+      "totalR": -2
+    },
+    {
+      "month": "2021-08",
+      "trades": 18,
+      "wins": 8,
+      "winRate": 44.4,
+      "totalR": -2
+    },
+    {
+      "month": "2021-09",
+      "trades": 21,
+      "wins": 8,
+      "winRate": 38.1,
+      "totalR": -5
+    },
+    {
+      "month": "2021-10",
+      "trades": 14,
+      "wins": 7,
+      "winRate": 50,
+      "totalR": 0
+    },
+    {
+      "month": "2021-11",
+      "trades": 20,
+      "wins": 8,
+      "winRate": 40,
+      "totalR": -4
+    },
+    {
+      "month": "2021-12",
+      "trades": 23,
+      "wins": 16,
+      "winRate": 69.6,
+      "totalR": 9
+    },
+    {
+      "month": "2022-01",
+      "trades": 17,
+      "wins": 4,
+      "winRate": 23.5,
+      "totalR": -9
+    },
+    {
+      "month": "2022-02",
+      "trades": 12,
+      "wins": 4,
+      "winRate": 33.3,
+      "totalR": -4
+    },
+    {
+      "month": "2022-03",
+      "trades": 31,
+      "wins": 22,
+      "winRate": 71,
+      "totalR": 14
+    },
+    {
+      "month": "2022-04",
+      "trades": 54,
+      "wins": 36,
+      "winRate": 66.7,
+      "totalR": 18
+    },
+    {
+      "month": "2022-05",
+      "trades": 25,
+      "wins": 14,
+      "winRate": 56,
+      "totalR": 3
+    },
+    {
+      "month": "2022-06",
+      "trades": 24,
+      "wins": 15,
+      "winRate": 62.5,
+      "totalR": 6.5
+    },
+    {
+      "month": "2022-07",
+      "trades": 16,
+      "wins": 8,
+      "winRate": 50,
+      "totalR": 0.5
+    },
+    {
+      "month": "2022-08",
+      "trades": 9,
+      "wins": 2,
+      "winRate": 22.2,
+      "totalR": -5
+    },
+    {
+      "month": "2022-09",
+      "trades": 39,
+      "wins": 18,
+      "winRate": 46.2,
+      "totalR": -1.5
+    },
+    {
+      "month": "2022-10",
+      "trades": 19,
+      "wins": 7,
+      "winRate": 36.8,
+      "totalR": -5
+    },
+    {
+      "month": "2022-11",
+      "trades": 24,
+      "wins": 11,
+      "winRate": 45.8,
+      "totalR": -1.5
+    },
+    {
+      "month": "2022-12",
+      "trades": 18,
+      "wins": 12,
+      "winRate": 66.7,
+      "totalR": 6.5
+    },
+    {
+      "month": "2023-01",
+      "trades": 7,
+      "wins": 2,
+      "winRate": 28.6,
+      "totalR": -3
+    },
+    {
+      "month": "2023-02",
+      "trades": 9,
+      "wins": 2,
+      "winRate": 22.2,
+      "totalR": -5
+    },
+    {
+      "month": "2023-03",
+      "trades": 10,
+      "wins": 5,
+      "winRate": 50,
+      "totalR": 0.5
+    },
+    {
+      "month": "2023-04",
+      "trades": 21,
+      "wins": 8,
+      "winRate": 38.1,
+      "totalR": -5
+    },
+    {
+      "month": "2023-05",
+      "trades": 12,
+      "wins": 7,
+      "winRate": 58.3,
+      "totalR": 2
+    },
+    {
+      "month": "2023-06",
+      "trades": 24,
+      "wins": 14,
+      "winRate": 58.3,
+      "totalR": 4
+    },
+    {
+      "month": "2023-07",
+      "trades": 9,
+      "wins": 4,
+      "winRate": 44.4,
+      "totalR": -0.5
+    },
+    {
+      "month": "2023-08",
+      "trades": 21,
+      "wins": 17,
+      "winRate": 81,
+      "totalR": 13
+    },
+    {
+      "month": "2023-09",
+      "trades": 15,
+      "wins": 13,
+      "winRate": 86.7,
+      "totalR": 11
+    },
+    {
+      "month": "2023-10",
+      "trades": 8,
+      "wins": 3,
+      "winRate": 37.5,
+      "totalR": -2
+    },
+    {
+      "month": "2023-11",
+      "trades": 26,
+      "wins": 17,
+      "winRate": 65.4,
+      "totalR": 8.5
+    },
+    {
+      "month": "2023-12",
+      "trades": 23,
+      "wins": 18,
+      "winRate": 78.3,
+      "totalR": 13.5
+    },
+    {
+      "month": "2024-01",
+      "trades": 8,
+      "wins": 6,
+      "winRate": 75,
+      "totalR": 4
+    },
+    {
+      "month": "2024-02",
+      "trades": 27,
+      "wins": 16,
+      "winRate": 59.3,
+      "totalR": 5
+    },
+    {
+      "month": "2024-03",
+      "trades": 23,
+      "wins": 7,
+      "winRate": 30.4,
+      "totalR": -7.4
+    },
+    {
+      "month": "2024-04",
+      "trades": 19,
+      "wins": 9,
+      "winRate": 47.4,
+      "totalR": 0.5
+    },
+    {
+      "month": "2024-05",
+      "trades": 36,
+      "wins": 24,
+      "winRate": 66.7,
+      "totalR": 12.5
+    },
+    {
+      "month": "2024-06",
+      "trades": 20,
+      "wins": 15,
+      "winRate": 75,
+      "totalR": 10
+    },
+    {
+      "month": "2024-07",
+      "trades": 30,
+      "wins": 20,
+      "winRate": 66.7,
+      "totalR": 11
+    },
+    {
+      "month": "2024-08",
+      "trades": 22,
+      "wins": 11,
+      "winRate": 50,
+      "totalR": 0.5
+    },
+    {
+      "month": "2024-09",
+      "trades": 23,
+      "wins": 11,
+      "winRate": 47.8,
+      "totalR": -1
+    },
+    {
+      "month": "2024-10",
+      "trades": 27,
+      "wins": 16,
+      "winRate": 59.3,
+      "totalR": 5.8
+    },
+    {
+      "month": "2024-11",
+      "trades": 20,
+      "wins": 15,
+      "winRate": 75,
+      "totalR": 16.32
+    },
+    {
+      "month": "2024-12",
+      "trades": 13,
+      "wins": 9,
+      "winRate": 69.2,
+      "totalR": 5.5
+    },
+    {
+      "month": "2025-01",
+      "trades": 25,
+      "wins": 17,
+      "winRate": 68,
+      "totalR": 9
+    },
+    {
+      "month": "2025-02",
+      "trades": 14,
+      "wins": 10,
+      "winRate": 71.4,
+      "totalR": 6
+    },
+    {
+      "month": "2025-03",
+      "trades": 23,
+      "wins": 14,
+      "winRate": 60.9,
+      "totalR": 5
+    },
+    {
+      "month": "2025-04",
+      "trades": 26,
+      "wins": 17,
+      "winRate": 65.4,
+      "totalR": 8.8
+    },
+    {
+      "month": "2025-05",
+      "trades": 14,
+      "wins": 10,
+      "winRate": 71.4,
+      "totalR": 6
+    },
+    {
+      "month": "2025-06",
+      "trades": 18,
+      "wins": 11,
+      "winRate": 61.1,
+      "totalR": 4
+    },
+    {
+      "month": "2025-07",
+      "trades": 19,
+      "wins": 8,
+      "winRate": 42.1,
+      "totalR": -3
+    },
+    {
+      "month": "2025-08",
+      "trades": 16,
+      "wins": 3,
+      "winRate": 18.8,
+      "totalR": -9.2
+    },
+    {
+      "month": "2025-09",
+      "trades": 14,
+      "wins": 8,
+      "winRate": 57.1,
+      "totalR": 2
+    },
+    {
+      "month": "2025-10",
+      "trades": 14,
+      "wins": 6,
+      "winRate": 42.9,
+      "totalR": -2
+    },
+    {
+      "month": "2025-11",
+      "trades": 13,
+      "wins": 9,
+      "winRate": 69.2,
+      "totalR": 5.8
+    },
+    {
+      "month": "2025-12",
+      "trades": 14,
+      "wins": 10,
+      "winRate": 71.4,
+      "totalR": 6
+    },
+    {
+      "month": "2026-01",
+      "trades": 21,
+      "wins": 11,
+      "winRate": 52.4,
+      "totalR": 1.5
+    },
+    {
+      "month": "2026-02",
+      "trades": 20,
+      "wins": 8,
+      "winRate": 40,
+      "totalR": -4
+    },
+    {
+      "month": "2026-03",
+      "trades": 12,
+      "wins": 3,
+      "winRate": 25,
+      "totalR": -6
+    }
+  ],
+  "stress": {
+    "worstStreak": 12,
+    "var95": -0.01,
+    "profitableMonths": 43,
+    "totalMonths": 74
+  },
+  "combinedStats": {
+    "trades": 1492,
+    "wins": 816,
+    "winRate": 54.7,
+    "sharpe": 1.72,
+    "maxDrawdown": 25.1,
+    "profitFactor": 1.25,
+    "expectancy": 0.11,
+    "totalR": 1.63,
+    "profitableMonths": 43,
+    "totalMonths": 74
+  },
+  "oosStats": {
+    "trades": 263,
+    "wins": 145,
+    "winRate": 55.1,
+    "sharpe": 1.82,
+    "maxDrawdown": 12.6,
+    "profitFactor": 1.27,
+    "expectancy": 0.1,
+    "totalR": 0.3,
+    "profitableMonths": 10,
+    "totalMonths": 15
+  }
+}

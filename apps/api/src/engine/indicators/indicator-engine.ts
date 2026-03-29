@@ -32,7 +32,7 @@ export type IndicatorResult = {
   efficiencyRatio: number;
 };
 
-// ─── Core math helpers ────────────────────────────────────────────────────────
+// ── Core math helpers ─────────────────────────────────────────────────────────
 
 function mean(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -43,7 +43,7 @@ function stddev(arr: number[]): number {
   return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
 }
 
-// ─── EMA ─────────────────────────────────────────────────────────────────────
+// ── EMA ───────────────────────────────────────────────────────────────────────
 
 export function calcEMA(prices: number[], period: number): number[] {
   if (prices.length < period) return [];
@@ -58,7 +58,7 @@ export function calcEMA(prices: number[], period: number): number[] {
   return result;
 }
 
-// ─── MACD ────────────────────────────────────────────────────────────────────
+// ── MACD ──────────────────────────────────────────────────────────────────────
 
 export function calcMACD(prices: number[]) {
   const ema12 = calcEMA(prices, 12);
@@ -75,7 +75,7 @@ export function calcMACD(prices: number[]) {
   };
 }
 
-// ─── RSI ─────────────────────────────────────────────────────────────────────
+// ── RSI ───────────────────────────────────────────────────────────────────────
 
 export function calcRSI(prices: number[], period = 14): number {
   if (prices.length < period + 1) return 50;
@@ -96,7 +96,7 @@ export function calcRSI(prices: number[], period = 14): number {
   return 100 - 100 / (1 + rs);
 }
 
-// ─── ATR ─────────────────────────────────────────────────────────────────────
+// ── ATR ───────────────────────────────────────────────────────────────────────
 
 export function calcATRSeries(bars: OHLCV[], period = 14): number[] {
   if (bars.length < 2) return [];
@@ -115,7 +115,7 @@ export function calcATRSeries(bars: OHLCV[], period = 14): number[] {
   return result;
 }
 
-// ─── ADX + DI ────────────────────────────────────────────────────────────────
+// ── ADX + DI ──────────────────────────────────────────────────────────────────
 
 export function calcADX(bars: OHLCV[], period = 14) {
   if (bars.length < period * 2 + 1) return { adx: 0, plusDI: 0, minusDI: 0 };
@@ -133,14 +133,11 @@ export function calcADX(bars: OHLCV[], period = 14) {
 
   if (trs.length < period) return { adx: 0, plusDI: 0, minusDI: 0 };
 
-  // Wilder smoothing: first value = sum of first N, then rolling
   let smoothTR  = trs.slice(0, period).reduce((a, b) => a + b, 0);
   let smoothPDM = plusDMs.slice(0, period).reduce((a, b) => a + b, 0);
   let smoothMDM = minusDMs.slice(0, period).reduce((a, b) => a + b, 0);
 
   const dxArr: number[] = [];
-
-  // First DX
   const pdi0 = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
   const mdi0 = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
   dxArr.push(Math.abs(pdi0 - mdi0) / ((pdi0 + mdi0) || 1) * 100);
@@ -149,19 +146,16 @@ export function calcADX(bars: OHLCV[], period = 14) {
     smoothTR  = smoothTR  - smoothTR  / period + trs[i]!;
     smoothPDM = smoothPDM - smoothPDM / period + plusDMs[i]!;
     smoothMDM = smoothMDM - smoothMDM / period + minusDMs[i]!;
-
     const pdi = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
     const mdi = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
     dxArr.push(Math.abs(pdi - mdi) / ((pdi + mdi) || 1) * 100);
   }
 
-  // ADX = Wilder smooth of DX
   let adx = dxArr.slice(0, period).reduce((a, b) => a + b, 0) / period;
   for (let i = period; i < dxArr.length; i++) {
     adx = (adx * (period - 1) + dxArr[i]!) / period;
   }
 
-  // Final DI values
   const pdi = smoothTR > 0 ? (smoothPDM / smoothTR) * 100 : 0;
   const mdi = smoothTR > 0 ? (smoothMDM / smoothTR) * 100 : 0;
 
@@ -172,7 +166,7 @@ export function calcADX(bars: OHLCV[], period = 14) {
   };
 }
 
-// ─── Bollinger Bands ──────────────────────────────────────────────────────────
+// ── Bollinger Bands ───────────────────────────────────────────────────────────
 
 export function calcBollingerBands(prices: number[], period = 20, mult = 2) {
   if (prices.length < period) return { upper: 0, middle: 0, lower: 0 };
@@ -182,7 +176,7 @@ export function calcBollingerBands(prices: number[], period = 20, mult = 2) {
   return { upper: middle + mult * sd, middle, lower: middle - mult * sd };
 }
 
-// ─── Stochastic ───────────────────────────────────────────────────────────────
+// ── Stochastic ────────────────────────────────────────────────────────────────
 
 export function calcStochastic(bars: OHLCV[], kPeriod = 14, dPeriod = 3) {
   if (bars.length < kPeriod) return { stochK: 50, stochD: 50 };
@@ -190,7 +184,7 @@ export function calcStochastic(bars: OHLCV[], kPeriod = 14, dPeriod = 3) {
   for (let i = kPeriod - 1; i < bars.length; i++) {
     const slice = bars.slice(i - kPeriod + 1, i + 1);
     const highest = Math.max(...slice.map((b) => b.high));
-    const lowest = Math.min(...slice.map((b) => b.low));
+    const lowest  = Math.min(...slice.map((b) => b.low));
     const curr = bars[i]!.close;
     kValues.push(highest === lowest ? 50 : ((curr - lowest) / (highest - lowest)) * 100);
   }
@@ -199,7 +193,7 @@ export function calcStochastic(bars: OHLCV[], kPeriod = 14, dPeriod = 3) {
   return { stochK, stochD };
 }
 
-// ─── OBV ─────────────────────────────────────────────────────────────────────
+// ── OBV ───────────────────────────────────────────────────────────────────────
 
 export function calcOBV(bars: OHLCV[]): number {
   let obv = 0;
@@ -211,7 +205,7 @@ export function calcOBV(bars: OHLCV[]): number {
   return obv;
 }
 
-// ─── Hurst Exponent (R/S method) ─────────────────────────────────────────────
+// ── Hurst Exponent (R/S method) ───────────────────────────────────────────────
 
 export function calcHurst(prices: number[], rvi = 50): number {
   const maxLagBase = 100;
@@ -233,10 +227,9 @@ export function calcHurst(prices: number[], rvi = 50): number {
 
   if (logLags.length < 2) return 0.5;
 
-  // Linear regression slope = Hurst exponent
   const n = logLags.length;
-  const sumX = logLags.reduce((a, b) => a + b, 0);
-  const sumY = logTau.reduce((a, b) => a + b, 0);
+  const sumX  = logLags.reduce((a, b) => a + b, 0);
+  const sumY  = logTau.reduce((a, b) => a + b, 0);
   const sumXY = logLags.reduce((s, x, i) => s + x * (logTau[i] ?? 0), 0);
   const sumX2 = logLags.reduce((s, x) => s + x * x, 0);
   const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
@@ -244,7 +237,7 @@ export function calcHurst(prices: number[], rvi = 50): number {
   return Math.max(0, Math.min(1, slope));
 }
 
-// ─── RVI (Relative Volatility Index) ─────────────────────────────────────────
+// ── RVI (Relative Volatility Index) ──────────────────────────────────────────
 
 export function calcRVI(bars: OHLCV[], period = 14): number {
   if (bars.length < period + 1) return 50;
@@ -258,7 +251,7 @@ export function calcRVI(bars: OHLCV[], period = 14): number {
   return ema[ema.length - 1] ?? 50;
 }
 
-// ─── Efficiency Ratio (Kaufman) ───────────────────────────────────────────────
+// ── Efficiency Ratio (Kaufman) ────────────────────────────────────────────────
 
 export function calcEfficiencyRatio(prices: number[], period = 10): number {
   if (prices.length < period) return 0.5;
@@ -268,7 +261,13 @@ export function calcEfficiencyRatio(prices: number[], period = 10): number {
   return sumChanges > 0 ? netChange / sumChanges : 0.5;
 }
 
-// ─── Price Structure Score ────────────────────────────────────────────────────
+// ── Price Structure Score (1-10) ──────────────────────────────────────────────
+// Returns a continuous 1-10 score:
+//   7-9 = bullish HH/HL structure (trending_bull eligible)
+//   1-3 = bearish LL/LH structure (trending_bear eligible)
+//   4   = contracting range (ranging eligible)
+//   5   = flat/neutral (choppy)
+//   6   = expanding (transitional)
 
 export function calcStructureScore(bars: OHLCV[], swingPoints = 5): number {
   if (bars.length < swingPoints * 3) return 5;
@@ -277,24 +276,34 @@ export function calcStructureScore(bars: OHLCV[], swingPoints = 5): number {
 
   for (let i = swingPoints; i < bars.length - swingPoints; i++) {
     const windowHighs = bars.slice(i - swingPoints, i + swingPoints + 1).map((b) => b.high);
-    const windowLows = bars.slice(i - swingPoints, i + swingPoints + 1).map((b) => b.low);
+    const windowLows  = bars.slice(i - swingPoints, i + swingPoints + 1).map((b) => b.low);
     if (bars[i]!.high === Math.max(...windowHighs)) highs.push(bars[i]!.high);
-    if (bars[i]!.low === Math.min(...windowLows)) lows.push(bars[i]!.low);
+    if (bars[i]!.low  === Math.min(...windowLows))  lows.push(bars[i]!.low);
   }
 
   if (highs.length < 2 || lows.length < 2) return 5;
 
-  const recentHighs = highs.slice(-3);
-  const recentLows = lows.slice(-3);
-  const hhhl = recentHighs[recentHighs.length - 1]! > recentHighs[0]! && recentLows[recentLows.length - 1]! > recentLows[0]!;
-  const lllh = recentHighs[recentHighs.length - 1]! < recentHighs[0]! && recentLows[recentLows.length - 1]! < recentLows[0]!;
+  const rh = highs.slice(-3);
+  const rl = lows.slice(-3);
 
-  if (hhhl) return 8;
-  if (lllh) return 2;
+  const bullStructure = rh[rh.length - 1]! > rh[0]! && rl[rl.length - 1]! > rl[0]!;
+  const bearStructure = rh[rh.length - 1]! < rh[0]! && rl[rl.length - 1]! < rl[0]!;
+  const contracting   = rh[rh.length - 1]! < rh[0]! && rl[rl.length - 1]! > rl[0]!;
+  const expanding     = rh[rh.length - 1]! > rh[0]! && rl[rl.length - 1]! < rl[0]!;
+
+  // Momentum: how strongly are swing points moving
+  const highMove = Math.abs(rh[rh.length - 1]! - rh[0]!) / (rh[0]! || 1);
+  const lowMove  = Math.abs(rl[rl.length - 1]! - rl[0]!) / (rl[0]! || 1);
+  const momentum = (highMove + lowMove) / 2;
+
+  if (bullStructure) return momentum > 0.005 ? 9 : momentum > 0.002 ? 8 : 7;
+  if (bearStructure) return momentum > 0.005 ? 1 : momentum > 0.002 ? 2 : 3;
+  if (contracting)   return 4;
+  if (expanding)     return 6;
   return 5;
 }
 
-// ─── Main entry point ─────────────────────────────────────────────────────────
+// ── Main entry point ──────────────────────────────────────────────────────────
 
 export function calculateIndicators(bars: OHLCV[]): IndicatorResult {
   const closes = bars.map((b) => b.close);
@@ -306,13 +315,13 @@ export function calculateIndicators(bars: OHLCV[]): IndicatorResult {
   const { adx, plusDI, minusDI } = calcADX(bars);
   const { stochK, stochD } = calcStochastic(bars);
   const { macdLine, macdSignal, macdHistogram } = calcMACD(closes);
-  const ema20arr = calcEMA(closes, 20);
-  const ema50arr = calcEMA(closes, 50);
+  const ema20arr  = calcEMA(closes, 20);
+  const ema50arr  = calcEMA(closes, 50);
   const ema200arr = calcEMA(closes, 200);
 
   return {
-    ema20: ema20arr[ema20arr.length - 1] ?? 0,
-    ema50: ema50arr[ema50arr.length - 1] ?? 0,
+    ema20:  ema20arr[ema20arr.length - 1]   ?? 0,
+    ema50:  ema50arr[ema50arr.length - 1]   ?? 0,
     ema200: ema200arr[ema200arr.length - 1] ?? 0,
     macdLine,
     macdSignal,
@@ -324,12 +333,12 @@ export function calculateIndicators(bars: OHLCV[]): IndicatorResult {
     plusDI,
     minusDI,
     atr: currentATR,
-    bbUpper: bb.upper,
-    bbMiddle: bb.middle,
-    bbLower: bb.lower,
-    obv: calcOBV(bars),
-    hurst: calcHurst(closes, rvi),
-    atrRatio: currentATR / avgATR20,
+    bbUpper:    bb.upper,
+    bbMiddle:   bb.middle,
+    bbLower:    bb.lower,
+    obv:        calcOBV(bars),
+    hurst:      calcHurst(closes, rvi),
+    atrRatio:   currentATR / avgATR20,
     bbBandwidth: bb.middle > 0 ? (bb.upper - bb.lower) / bb.middle : 0,
     structureScore: calcStructureScore(bars),
     rvi,

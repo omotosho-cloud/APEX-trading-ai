@@ -33,6 +33,7 @@ export async function fetchTimeSeries(
   interval: string,
   outputsize: number = 5000,
   startDate?: string,
+  endDate?: string,
 ): Promise<TwelveDataCandle[]> {
   const params: Record<string, string | number> = {
     symbol,
@@ -44,6 +45,7 @@ export async function fetchTimeSeries(
   };
 
   if (startDate) params["start_date"] = startDate;
+  if (endDate)   params["end_date"]   = endDate;
 
   const { data } = await axios.get<TimeSeriesResponse>(`${BASE_URL}/time_series`, { params });
 
