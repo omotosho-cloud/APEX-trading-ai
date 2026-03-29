@@ -1,11 +1,10 @@
 import { create } from "zustand";
-import type { Timeframe } from "@apex/types";
 
 type DashboardState = {
   activePair: string;
-  activeTimeframe: Timeframe;
+  activeTimeframe: string;
   setActivePair: (pair: string) => void;
-  setActiveTimeframe: (tf: Timeframe) => void;
+  setActiveTimeframe: (tf: string) => void;
 };
 
 export const useDashboardStore = create<DashboardState>((set) => ({

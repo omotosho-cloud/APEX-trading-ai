@@ -2,18 +2,25 @@ import WebSocket from "ws";
 import type { CandleAggregator } from "./candle-aggregator.js";
 import { FOREX_INSTRUMENTS, TWELVE_DATA_SYMBOL } from "./instruments.js";
 
-const TD_WS_URL = "wss://ws.twelvedata.com/v1/quotes/price";
 const API_KEY = process.env.TWELVE_DATA_API_KEY!;
+
+// Twelve Data WebSocket URL with auth token
+function getWebSocketUrl() {
+  return `wss://ws.twelvedata.com/v1/quotes/price?apikey=${API_KEY}`;
+}
 
 export function startTwelveDataFeed(aggregator: CandleAggregator) {
   let ws: WebSocket;
   let reconnectTimer: NodeJS.Timeout;
   let heartbeatTimer: NodeJS.Timeout;
 
-  const symbols = FOREX_INSTRUMENTS.map((i) => TWELVE_DATA_SYMBOL[i]).filter(Boolean);
+  const symbols = FOREX_INSTRUMENTS.map((i) => TWELVE_DATA_SYMBOL[i]).filter(
+    Boolean,
+  );
 
   function connect() {
-    ws = new WebSocket(TD_WS_URL);
+    const url = getWebSocketUrl();
+    ws = new WebSocket(url);
 
     ws.on("open", () => {
       console.log("[TwelveData] WebSocket connected");
@@ -22,7 +29,7 @@ export function startTwelveDataFeed(aggregator: CandleAggregator) {
       ws.send(
         JSON.stringify({
           action: "subscribe",
-          params: { symbols: symbols.join(","), apikey: API_KEY },
+          params: { symbols: symbols.join(",") },
         }),
       );
 
@@ -48,7 +55,9 @@ export function startTwelveDataFeed(aggregator: CandleAggregator) {
         // Convert TD symbol (EUR/USD) back to internal (EURUSD)
         const instrument = msg.symbol.replace("/", "");
         const price = parseFloat(msg.price);
-        const time = msg.timestamp ? new Date(msg.timestamp * 1000) : new Date();
+        const time = msg.timestamp
+          ? new Date(msg.timestamp * 1000)
+          : new Date();
 
         aggregator.tick(instrument, price, 0, time);
       } catch {

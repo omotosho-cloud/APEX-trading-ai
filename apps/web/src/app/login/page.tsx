@@ -23,6 +23,8 @@ export default function LoginPage() {
   const onSubmit = async (values: LoginForm) => {
     try {
       await login(values.email, values.password);
+      // Small delay to allow Supabase to set the session cookie before middleware reads it
+      await new Promise((r) => setTimeout(r, 100));
       router.push(redirect);
       router.refresh();
     } catch (err) {

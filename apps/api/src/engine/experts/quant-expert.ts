@@ -24,8 +24,8 @@ async function getHistoricalStats(
   const result = await db
     .select({
       total: sql<number>`COUNT(*)`,
-      wins: sql<number>`SUM(CASE WHEN so.outcome IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END)`,
-      avgRR: sql<number>`AVG(so.rr_achieved)`,
+      wins: sql<number>`SUM(CASE WHEN ${signalOutcomes.outcome} IN ('tp1','tp2','tp3') THEN 1 ELSE 0 END)`,
+      avgRR: sql<number>`AVG(${signalOutcomes.rr_achieved})`,
     })
     .from(signalOutcomes)
     .innerJoin(signals, eq(signalOutcomes.signal_id, signals.id))

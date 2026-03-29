@@ -1,31 +1,50 @@
 import { Redis } from "@upstash/redis";
 
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+let _redis: Redis | null = null;
 
-if (!redisUrl || !redisToken) {
-  throw new Error("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required");
+function getRedis(): Redis | null {
+  if (_redis) return _redis;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  try {
+    _redis = new Redis({ url, token });
+    return _redis;
+  } catch {
+    return null;
+  }
 }
 
-export const redis = new Redis({ url: redisUrl, token: redisToken });
-
 export async function cacheGet<T>(key: string): Promise<T | null> {
-  return redis.get<T>(key);
+  try {
+    return await getRedis()?.get<T>(key) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function cacheSet<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-  if (ttlSeconds) {
-    await redis.setex(key, ttlSeconds, value);
-  } else {
-    await redis.set(key, value);
+  try {
+    const r = getRedis();
+    if (!r) return;
+    if (ttlSeconds) {
+      await r.setex(key, ttlSeconds, value);
+    } else {
+      await r.set(key, value);
+    }
+  } catch {
+    // non-fatal
   }
 }
 
 export async function cacheDel(key: string): Promise<void> {
-  await redis.del(key);
+  try {
+    await getRedis()?.del(key);
+  } catch {
+    // non-fatal
+  }
 }
 
-// Cache key builders
 export const CacheKeys = {
   activeSignals: () => "signals:active",
   signalsByInstrument: (instrument: string) => `signals:${instrument}`,

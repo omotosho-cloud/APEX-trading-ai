@@ -1,18 +1,7 @@
 import { Worker } from "bullmq";
 import { runSignalPipeline } from "../engine/signal/signal-pipeline.js";
 import { ALL_INSTRUMENTS, ALL_TIMEFRAMES } from "../engine/market-data/instruments.js";
-
-function parseRedisUrl(url: string) {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: Number(parsed.port) || 6379,
-    ...(parsed.password ? { password: parsed.password } : {}),
-    maxRetriesPerRequest: null as null,
-  };
-}
-
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+import { parseRedisUrl, REDIS_URL } from "../redis-connection.js";
 
 export const signalWorker = new Worker(
   "signal-generation",
@@ -32,7 +21,7 @@ export const signalWorker = new Worker(
 
     console.log(`[SignalWorker] Done — fired: ${fired}, suppressed: ${suppressed}`);
   },
-  { connection: parseRedisUrl(redisUrl), concurrency: 1 },
+  { connection: parseRedisUrl(REDIS_URL), concurrency: 1 },
 );
 
 signalWorker.on("failed", (job, err) => {
