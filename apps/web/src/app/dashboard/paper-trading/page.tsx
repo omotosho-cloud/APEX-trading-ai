@@ -59,6 +59,7 @@ function MetricCard({ label, value, sub, highlight }: { label: string; value: st
   );
 }
 
+
 function PaperTradingContent({ data }: { data: PaperTradingResponse }) {
   const { metrics, activeSignals } = data;
   const vsTarget = metrics.winRate - metrics.targets.winRate;
