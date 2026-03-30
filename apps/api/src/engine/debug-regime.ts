@@ -8,7 +8,7 @@ import { classifyRegime } from "./regime/regime-classifier.js";
 const rows = await tsdb
   .select()
   .from(candles)
-  .where(and(eq(candles.instrument, "EURUSD"), eq(candles.timeframe, "M15")))
+  .where(and(eq(candles.instrument, "EURUSD"), eq(candles.timeframe, "H4")))
   .orderBy(asc(candles.time))
   .limit(600);
 

@@ -14,9 +14,9 @@ export function startTwelveDataFeed(aggregator: CandleAggregator) {
   let reconnectTimer: NodeJS.Timeout;
   let heartbeatTimer: NodeJS.Timeout;
 
-  const symbols = FOREX_INSTRUMENTS.map((i) => TWELVE_DATA_SYMBOL[i]).filter(
-    Boolean,
-  );
+  // Only subscribe to active trading pairs
+  const ACTIVE_FOREX = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "NZDUSD"];
+  const symbols = ACTIVE_FOREX.map((i) => TWELVE_DATA_SYMBOL[i]).filter(Boolean);
 
   function connect() {
     const url = getWebSocketUrl();
