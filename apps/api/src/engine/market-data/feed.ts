@@ -21,13 +21,13 @@ export function startRealTimeFeed(onCandleClose?: CandleHandler) {
     }
   });
 
-  const stopBinance = startBinanceFeed(aggregator);
   const stopTwelveData = startTwelveDataFeed(aggregator);
+  // Binance disabled — only trading forex pairs
+  // const stopBinance = startBinanceFeed(aggregator);
 
-  console.log("[Feed] Real-time feed started — Binance (crypto) + TwelveData (forex)");
+  console.log("[Feed] Real-time feed started — TwelveData (forex)");
 
   return () => {
-    stopBinance();
     stopTwelveData();
   };
 }

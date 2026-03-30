@@ -10,12 +10,11 @@ COPY apps/api/ ./apps/api/
 
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm --filter @apex/types build || echo "types build skipped"
-RUN pnpm --filter @apex/lib build || echo "lib build skipped"
-RUN pnpm --filter @apex/api build
+# Build @apex/types so dist/index.node.js exists at runtime
+RUN pnpm --filter @apex/types build
 
 WORKDIR /app/apps/api
 
 EXPOSE 3001
 
-CMD ["node", "dist/apps/api/src/index.js"]
+CMD ["node_modules/.bin/tsx", "src/index.ts"]
