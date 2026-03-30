@@ -20,7 +20,10 @@ const server = Fastify({
 async function bootstrap() {
   // CORS
   await server.register(cors, {
-    origin: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    origin: [
+      process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      "https://apex-trading-ai-web-kappa.vercel.app",
+    ],
     credentials: true,
   });
 
