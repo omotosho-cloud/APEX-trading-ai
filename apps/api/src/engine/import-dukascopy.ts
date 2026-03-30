@@ -40,7 +40,7 @@ async function importPair(instrument: string, dukaPair: string, timeframe: strin
       dates: { from, to: TO },
       timeframe: dukaTimeframe,
       format: "array",
-      flushCache: false,
+      useCache: false,
     });
 
     if (!data || data.length === 0) {
