@@ -70,18 +70,14 @@ async function bootstrap() {
       if (secret !== process.env.CRON_SECRET) {
         return reply.status(401).send({ error: "Unauthorized" });
       }
-      const { runSignalPipeline } =
-        await import("./engine/signal/signal-pipeline.js");
-      const { ALL_INSTRUMENTS, ALL_TIMEFRAMES } =
-        await import("./engine/market-data/instruments.js");
+      const { runSignalPipeline } = await import("./engine/signal/signal-pipeline.js");
+      const PAIRS = ["EURUSD", "USDJPY", "USDCHF", "NZDUSD", "GBPUSD"];
       let fired = 0;
       await Promise.allSettled(
-        ALL_INSTRUMENTS.flatMap((inst) =>
-          ALL_TIMEFRAMES.map(async (tf) => {
-            const r = await runSignalPipeline(inst, tf);
-            if (r.fired) fired++;
-          }),
-        ),
+        PAIRS.map(async (inst) => {
+          const r = await runSignalPipeline(inst, "H4");
+          if (r.fired) fired++;
+        }),
       );
       return { queued: true, fired };
     },
@@ -105,13 +101,11 @@ async function bootstrap() {
   try {
     const { signalWorker } = await import("./workers/signal-worker.js");
     const { calendarWorker } = await import("./workers/calendar-worker.js");
-    signalWorker.on("error", (err: Error) =>
-      console.error("[SignalWorker]", err.message),
-    );
-    calendarWorker.on("error", (err: Error) =>
-      console.error("[CalendarWorker]", err.message),
-    );
-    console.log("[Workers] Signal + Calendar workers started");
+    const { outcomeTrackerWorker } = await import("./workers/outcome-tracker-worker.js");
+    signalWorker.on("error", (err: Error) => console.error("[SignalWorker]", err.message));
+    calendarWorker.on("error", (err: Error) => console.error("[CalendarWorker]", err.message));
+    outcomeTrackerWorker.on("error", (err: Error) => console.error("[OutcomeTracker]", err.message));
+    console.log("[Workers] Signal + Calendar + OutcomeTracker workers started");
   } catch (err) {
     console.error("[Workers] Failed to start — Redis may be unavailable:", err);
   }

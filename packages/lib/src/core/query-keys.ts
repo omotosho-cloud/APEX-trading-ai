@@ -9,3 +9,4 @@ export const EXPERT_ACCURACY_KEY = "expert-accuracy" as const;
 export const CALENDAR_KEY = "calendar" as const;
 export const ADMIN_SIGNALS_KEY = "admin-signals" as const;
 export const ADMIN_USERS_KEY = "admin-users" as const;
+export const PAPER_TRADING_KEY = "paper-trading" as const;
