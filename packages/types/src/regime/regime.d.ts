@@ -1,0 +1,41 @@
+import { z } from "zod";
+export declare const RegimeSchema: z.ZodEnum<["trending_bull", "trending_bear", "ranging", "breakout_imminent", "volatile", "choppy"]>;
+export type Regime = z.infer<typeof RegimeSchema>;
+export declare const RegimeStateSchema: z.ZodObject<{
+    time: z.ZodString;
+    instrument: z.ZodString;
+    timeframe: z.ZodString;
+    regime: z.ZodEnum<["trending_bull", "trending_bear", "ranging", "breakout_imminent", "volatile", "choppy"]>;
+    confidence: z.ZodNumber;
+    adx: z.ZodNullable<z.ZodNumber>;
+    hurst: z.ZodNullable<z.ZodNumber>;
+    atr_ratio: z.ZodNullable<z.ZodNumber>;
+    bb_bandwidth: z.ZodNullable<z.ZodNumber>;
+    structure_score: z.ZodNullable<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    time: string;
+    instrument: string;
+    timeframe: string;
+    regime: "trending_bull" | "trending_bear" | "ranging" | "breakout_imminent" | "volatile" | "choppy";
+    confidence: number;
+    adx: number | null;
+    hurst: number | null;
+    atr_ratio: number | null;
+    bb_bandwidth: number | null;
+    structure_score: number | null;
+}, {
+    time: string;
+    instrument: string;
+    timeframe: string;
+    regime: "trending_bull" | "trending_bear" | "ranging" | "breakout_imminent" | "volatile" | "choppy";
+    confidence: number;
+    adx: number | null;
+    hurst: number | null;
+    atr_ratio: number | null;
+    bb_bandwidth: number | null;
+    structure_score: number | null;
+}>;
+export type RegimeState = z.infer<typeof RegimeStateSchema>;
+export declare const SessionSchema: z.ZodEnum<["london_ny_overlap", "london", "new_york", "tokyo", "closed"]>;
+export type Session = z.infer<typeof SessionSchema>;
+export declare const SESSION_MULTIPLIERS: Record<Session, number>;
