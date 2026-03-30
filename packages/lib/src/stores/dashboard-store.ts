@@ -11,7 +11,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   activePair: "EURUSD",
   activeTimeframe: "H4",
   setActivePair: (activePair) => set({ activePair }),
-  setActiveTimeframe: (activeTimeframe) => set({ activeTimeframe }),
+  setActiveTimeframe: () => set({ activeTimeframe: "H4" }), // locked to H4
 }));
 
 export const selectActivePair = (state: DashboardState) => state.activePair;

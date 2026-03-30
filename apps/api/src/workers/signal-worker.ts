@@ -1,22 +1,31 @@
 import { Worker } from "bullmq";
 import { runSignalPipeline } from "../engine/signal/signal-pipeline.js";
-import { ALL_INSTRUMENTS, ALL_TIMEFRAMES } from "../engine/market-data/instruments.js";
 import { parseRedisUrl, REDIS_URL } from "../redis-connection.js";
+
+// Live trading pairs approved by backtest (H4 only)
+const LIVE_INSTRUMENTS = [
+  "EURUSD", 
+  "USDJPY", 
+  "USDCHF",  
+  "NZDUSD",  
+  "GBPUSD",  
+] as const;
+
+const LIVE_TIMEFRAME = "H4";
 
 export const signalWorker = new Worker(
   "signal-generation",
   async () => {
-    console.log("[SignalWorker] Running signal pipeline for all instruments...");
+    console.log(`[SignalWorker] Running H4 pipeline for ${LIVE_INSTRUMENTS.length} pairs...`);
     let fired = 0, suppressed = 0;
 
     await Promise.allSettled(
-      ALL_INSTRUMENTS.flatMap((instrument) =>
-        ALL_TIMEFRAMES.map(async (timeframe) => {
-          const result = await runSignalPipeline(instrument, timeframe);
-          if (result.fired) fired++;
-          else suppressed++;
-        }),
-      ),
+      LIVE_INSTRUMENTS.map(async (instrument) => {
+        const result = await runSignalPipeline(instrument, LIVE_TIMEFRAME);
+        if (result.fired) fired++;
+        else suppressed++;
+        console.log(`[SignalWorker] ${instrument} H4 — ${result.fired ? "FIRED" : result.reason}`);
+      }),
     );
 
     console.log(`[SignalWorker] Done — fired: ${fired}, suppressed: ${suppressed}`);
