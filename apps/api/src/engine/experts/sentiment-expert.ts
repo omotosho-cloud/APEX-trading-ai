@@ -43,9 +43,16 @@ export async function sentimentExpert(
     return { direction: "neutral", confidence: 50, reasoning: `neutral FGI=${fgi}` };
   }
 
-  // Forex: use RSI as sentiment proxy
-  const rsi = indicators.rsi;
-  if (rsi > 60) return { direction: "buy", confidence: 58, reasoning: `RSI momentum ${rsi.toFixed(0)}` };
-  if (rsi < 40) return { direction: "sell", confidence: 58, reasoning: `RSI weakness ${rsi.toFixed(0)}` };
-  return { direction: "neutral", confidence: 50, reasoning: "neutral RSI sentiment" };
+  // Forex: use OBV momentum as volume-based sentiment (not RSI — that's already in technical expert)
+  const obv = indicators.obv;
+  const obvPositive = obv > 0;
+  const rvi = indicators.rvi;
+
+  // RVI > 60 = strong upward closes relative to range = bullish sentiment
+  // RVI < 40 = strong downward closes = bearish sentiment
+  if (rvi > 62 && obvPositive) return { direction: "buy", confidence: 60, reasoning: `RVI ${rvi.toFixed(0)} + positive OBV` };
+  if (rvi < 38 && !obvPositive) return { direction: "sell", confidence: 60, reasoning: `RVI ${rvi.toFixed(0)} + negative OBV` };
+  if (rvi > 62) return { direction: "buy", confidence: 54, reasoning: `RVI momentum ${rvi.toFixed(0)}` };
+  if (rvi < 38) return { direction: "sell", confidence: 54, reasoning: `RVI weakness ${rvi.toFixed(0)}` };
+  return { direction: "neutral", confidence: 50, reasoning: "neutral RVI/OBV sentiment" };
 }

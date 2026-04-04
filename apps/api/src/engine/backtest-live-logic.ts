@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { tsdb } from "../db/client.js";
 import { candles } from "../db/schema/index.js";
-import { and, eq, asc } from "drizzle-orm";
-import { sql } from "drizzle-orm";
+import { and, eq, asc, sql } from "drizzle-orm";
 import { calculateIndicators } from "./indicators/indicator-engine.js";
 import { classifyRaw } from "./regime/regime-classifier.js";
 import { calculateSignalLevels } from "./signal/tp-sl-engine.js";
@@ -11,27 +10,33 @@ import { smartMoneyExpert } from "./experts/smart-money-expert.js";
 import { macroExpert } from "./experts/macro-expert.js";
 import { sanityCheckExpert, applySanityCap } from "./experts/sanity-check.js";
 import { BASE_WEIGHTS, getRegimeWeights } from "./backtest-helpers.js";
-import { ALL_INSTRUMENTS } from "./market-data/instruments.js";
+import { ALL_INSTRUMENTS, ALL_TIMEFRAMES } from "./market-data/instruments.js";
 import { writeFileSync } from "fs";
 import type { OHLCV } from "./indicators/indicator-engine.js";
 import type { Regime } from "@apex/types";
 
-const MIN_CONFIDENCE = 60;
-const LOOKBACK       = 250;
-const FORWARD_BARS   = 120; // 120 H4 bars = 20 days — enough time for TP2/TP3 to be reached
-const RISK_PER_TRADE = 0.01;
-const TIMEFRAME      = "H4";
-const COOLDOWN       = 5;
-
-const LIVE_PAIRS = [
-  "EURUSD","GBPUSD","USDJPY","USDCHF",
-  "NZDUSD","EURGBP","EURJPY","GBPJPY",
-];
-
+// ── Tuned engine parameters ───────────────────────────────────────────────────
+const MIN_CONFIDENCE   = 55;   // was 60 — allows more signals, especially on shorter TFs
+const MIN_REGIME_CONF  = 55;   // was 60 — same rationale
+const ATR_RATIO_GATE   = 1.6;  // was 1.8 — tighter volatility filter
+const LOOKBACK         = 250;
+const RISK_PER_TRADE   = 0.01;
 const WALKFORWARD_SPLIT = "2025-01-01";
+
+// Per-timeframe: forward bars to simulate outcome + cooldown between signals
+const TF_CONFIG: Record<string, { forwardBars: number; cooldown: number }> = {
+  M5:  { forwardBars: 24,  cooldown: 3 },
+  M15: { forwardBars: 32,  cooldown: 3 },
+  M30: { forwardBars: 48,  cooldown: 3 },
+  H1:  { forwardBars: 72,  cooldown: 4 },
+  H4:  { forwardBars: 120, cooldown: 5 },
+  D1:  { forwardBars: 60,  cooldown: 5 },
+  W1:  { forwardBars: 24,  cooldown: 3 },
+};
 
 type Trade = {
   instrument: string;
+  timeframe: string;
   direction: "buy" | "sell";
   regime: Regime;
   confidence: number;
@@ -58,6 +63,7 @@ type PeriodStats = {
 
 type PairResult = {
   instrument: string;
+  timeframe: string;
   dataYears: number;
   inSample: PeriodStats;
   outOfSample: PeriodStats | null;
@@ -78,9 +84,9 @@ function quantStub() {
   return { direction: "neutral" as const, confidence: 50, reasoning: "no history" };
 }
 
-function getWeights(instrument: string, regime: Regime) {
+function getWeights(instrument: string, timeframe: string, regime: Regime) {
   const w = { ...BASE_WEIGHTS };
-  const adj = getRegimeWeights(regime, TIMEFRAME, instrument);
+  const adj = getRegimeWeights(regime, timeframe, instrument);
   for (const k of Object.keys(w) as (keyof typeof w)[]) w[k] = Math.max(0, w[k]! + (adj[k] ?? 0));
   const total = Object.values(w).reduce((s, v) => s + v, 0);
   for (const k of Object.keys(w) as (keyof typeof w)[]) w[k]! /= total;
@@ -88,22 +94,24 @@ function getWeights(instrument: string, regime: Regime) {
 }
 
 function riskManager(rrRatio: number, atrRatio: number, confidence: number) {
-  if (rrRatio < 0.9) return { approved: false, confidence };
+  if (rrRatio < 1.2) return { approved: false, confidence };
   if (confidence < MIN_CONFIDENCE) return { approved: false, confidence };
   let adj = confidence;
-  if (atrRatio > 1.8) adj -= 5;
+  if (atrRatio > ATR_RATIO_GATE) adj -= 5;
   return { approved: adj >= MIN_CONFIDENCE, confidence: Math.round(adj) };
 }
 
-async function simulatePair(instrument: string): Promise<Trade[]> {
+async function simulatePair(instrument: string, timeframe: string): Promise<Trade[]> {
+  const { forwardBars, cooldown } = TF_CONFIG[timeframe] ?? TF_CONFIG["H4"]!;
+
   const rows = await tsdb
     .select()
     .from(candles)
-    .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, TIMEFRAME)))
+    .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, timeframe)))
     .orderBy(asc(candles.time))
     .limit(50_000);
 
-  if (rows.length < LOOKBACK + FORWARD_BARS + 10) return [];
+  if (rows.length < LOOKBACK + forwardBars + 10) return [];
 
   const bars: (OHLCV & { time: Date })[] = rows.map((r) => ({
     open: parseFloat(r.open), high: parseFloat(r.high),
@@ -115,8 +123,8 @@ async function simulatePair(instrument: string): Promise<Trade[]> {
   const trades: Trade[] = [];
   let lastSignalBar = -999;
 
-  for (let i = LOOKBACK; i < bars.length - FORWARD_BARS; i++) {
-    if (i - lastSignalBar < COOLDOWN) continue;
+  for (let i = LOOKBACK; i < bars.length - forwardBars; i++) {
+    if (i - lastSignalBar < cooldown) continue;
 
     const barTime = bars[i]!.time;
     const h = barTime.getUTCHours();
@@ -136,20 +144,20 @@ async function simulatePair(instrument: string): Promise<Trade[]> {
     );
 
     if (regime === "choppy") continue;
-    if (regimeConf < MIN_CONFIDENCE) continue;
+    if (regimeConf < MIN_REGIME_CONF) continue;
 
     const price = bars[i]!.close;
-    const weights = getWeights(instrument, regime);
+    const weights = getWeights(instrument, timeframe, regime);
 
     const votes = {
       technical:   technicalExpert(ind, regime, price),
-      smart_money: smartMoneyExpert(window, ind, price, TIMEFRAME),
+      smart_money: smartMoneyExpert(window, ind, price, timeframe),
       sentiment:   sentimentStub(instrument, ind),
-      macro:       macroExpert(instrument, TIMEFRAME, ind, regime),
+      macro:       macroExpert(instrument, timeframe, ind, regime),
       quant:       quantStub(),
     };
 
-    const threshold = regime === "breakout_imminent" ? 40 : regime === "volatile" ? 55 : 60;
+    const threshold = regime === "breakout_imminent" ? 45 : regime === "volatile" || regime === "ranging" ? 65 : 60;
     let buyScore = 0, sellScore = 0;
     for (const [name, vote] of Object.entries(votes)) {
       const w = weights[name as keyof typeof weights] ?? 0;
@@ -166,7 +174,7 @@ async function simulatePair(instrument: string): Promise<Trade[]> {
     const sanity = sanityCheckExpert(direction, ind);
     const { confidence: conf } = applySanityCap(direction, rawConf, sanity);
 
-    const levels = calculateSignalLevels(instrument, TIMEFRAME, direction, price, ind.atr, regime);
+    const levels = calculateSignalLevels(instrument, timeframe, direction, price, ind.atr, regime);
     if (!levels.passes) continue;
 
     const risk = riskManager(levels.rrRatio, ind.atrRatio, conf);
@@ -175,30 +183,25 @@ async function simulatePair(instrument: string): Promise<Trade[]> {
     lastSignalBar = i;
 
     let outcome: "tp1" | "tp2" | "tp3" | "sl" | "expired" = "expired";
-    let barsToClose = FORWARD_BARS;
-    for (let j = i + 1; j <= i + FORWARD_BARS && j < bars.length; j++) {
+    let barsToClose = forwardBars;
+    for (let j = i + 1; j <= i + forwardBars && j < bars.length; j++) {
       const bar = bars[j]!;
       if (direction === "buy") {
-        if (bar.low  <= levels.slPrice)   { outcome = "sl";  barsToClose = j - i; break; }
+        if (bar.low  <= levels.slPrice)                     { outcome = "sl";  barsToClose = j - i; break; }
         if (levels.tp3Price && bar.high >= levels.tp3Price) { outcome = "tp3"; barsToClose = j - i; break; }
-        if (bar.high >= levels.tp2Price)  { outcome = "tp2"; barsToClose = j - i; break; }
-        if (bar.high >= levels.tp1Price)  { outcome = "tp1"; barsToClose = j - i; break; }
+        if (bar.high >= levels.tp2Price)                    { outcome = "tp2"; barsToClose = j - i; break; }
+        if (bar.high >= levels.tp1Price)                    { outcome = "tp1"; barsToClose = j - i; break; }
       } else {
-        if (bar.high >= levels.slPrice)   { outcome = "sl";  barsToClose = j - i; break; }
-        if (levels.tp3Price && bar.low <= levels.tp3Price)  { outcome = "tp3"; barsToClose = j - i; break; }
-        if (bar.low  <= levels.tp2Price)  { outcome = "tp2"; barsToClose = j - i; break; }
-        if (bar.low  <= levels.tp1Price)  { outcome = "tp1"; barsToClose = j - i; break; }
+        if (bar.high >= levels.slPrice)                    { outcome = "sl";  barsToClose = j - i; break; }
+        if (levels.tp3Price && bar.low <= levels.tp3Price) { outcome = "tp3"; barsToClose = j - i; break; }
+        if (bar.low  <= levels.tp2Price)                   { outcome = "tp2"; barsToClose = j - i; break; }
+        if (bar.low  <= levels.tp1Price)                   { outcome = "tp1"; barsToClose = j - i; break; }
       }
     }
 
-    // Realistic partial close model matching live exit protocol:
-    // TP1 hit: close 50% at TP1 R:R, remaining 50% trails to TP2
-    // TP2 hit: close 30% more at TP2 R:R, remaining 20% trails to TP3
-    // TP3 hit: close final 20% at TP3 R:R
-    // SL hit:  full loss
-    const rr1 = levels.rrRatio;          // TP1 R:R
-    const rr2 = levels.rrRatio * 2;      // TP2 R:R
-    const rr3 = levels.tp3Price          // TP3 R:R
+    const rr1 = levels.rrRatio;
+    const rr2 = levels.rrRatio * 2;
+    const rr3 = levels.tp3Price
       ? Math.abs(levels.tp3Price - levels.entryPrice) / Math.abs(levels.slPrice - levels.entryPrice)
       : rr2 * 1.5;
 
@@ -209,7 +212,7 @@ async function simulatePair(instrument: string): Promise<Trade[]> {
       outcome === "sl"  ? -1 : -0.2;
 
     trades.push({
-      instrument, direction, regime,
+      instrument, timeframe, direction, regime,
       confidence: risk.confidence,
       rrRatio: levels.rrRatio,
       outcome, pnlR,
@@ -268,74 +271,103 @@ function meetsCriteria(s: PeriodStats): boolean {
 
 async function run() {
   console.log("\n╔══════════════════════════════════════════════════════════╗");
-  console.log("║     APEX H4 BACKTEST — WALK-FORWARD VALIDATION          ║");
+  console.log("║   APEX ALL-TIMEFRAME BACKTEST — WALK-FORWARD VALIDATION  ║");
   console.log("╚══════════════════════════════════════════════════════════╝");
-  console.log(`\nTimeframe: H4  |  In-sample: 2020-2024  |  Out-of-sample: 2025+`);
-  console.log(`Pairs: ${LIVE_PAIRS.join(", ")}\n`);
+  console.log(`\nTimeframes: ${ALL_TIMEFRAMES.join(", ")}  |  In-sample: pre-2025  |  OOS: 2025+`);
+  console.log(`Instruments: ${ALL_INSTRUMENTS.join(", ")}\n`);
+  console.log(`Parameters: MIN_CONFIDENCE=${MIN_CONFIDENCE} | MIN_REGIME_CONF=${MIN_REGIME_CONF} | ATR_RATIO_GATE=${ATR_RATIO_GATE}\n`);
 
   const allTrades: Trade[] = [];
   const results: PairResult[] = [];
 
+  // Fetch data coverage info for all TF/instrument combos in one query
   const dataInfo = await tsdb
     .select({
       instrument: candles.instrument,
+      timeframe: candles.timeframe,
       years: sql<string>`ROUND(EXTRACT(EPOCH FROM (MAX(time) - MIN(time))) / 86400 / 365, 1)`,
     })
     .from(candles)
-    .where(eq(candles.timeframe, TIMEFRAME))
-    .groupBy(candles.instrument);
+    .groupBy(candles.instrument, candles.timeframe);
 
   const yearsMap: Record<string, number> = {};
-  for (const r of dataInfo) yearsMap[r.instrument] = parseFloat(r.years ?? "0");
+  for (const r of dataInfo) yearsMap[`${r.instrument}:${r.timeframe}`] = parseFloat(r.years ?? "0");
 
-  for (const instrument of ALL_INSTRUMENTS) {
-    if (!LIVE_PAIRS.includes(instrument)) continue;
+  for (const timeframe of ALL_TIMEFRAMES) {
+    console.log(`\n── ${timeframe} ${"─".repeat(60)}`);
 
-    const dataYears = yearsMap[instrument] ?? 0;
-    process.stdout.write(`  ${instrument.padEnd(10)} [${dataYears}y] ... `);
+    for (const instrument of ALL_INSTRUMENTS) {
+      const dataYears = yearsMap[`${instrument}:${timeframe}`] ?? 0;
+      process.stdout.write(`  ${instrument.padEnd(10)} [${dataYears}y] ... `);
 
-    try {
-      const trades = await simulatePair(instrument);
-      const isTrades  = trades.filter((t) => t.period === "in-sample");
-      const oosTrades = trades.filter((t) => t.period === "out-of-sample");
+      try {
+        const trades = await simulatePair(instrument, timeframe);
+        const isTrades  = trades.filter((t) => t.period === "in-sample");
+        const oosTrades = trades.filter((t) => t.period === "out-of-sample");
 
-      const inSample    = calcPeriodStats(isTrades);
-      const outOfSample = calcPeriodStats(oosTrades);
-      const combined    = calcPeriodStats(trades);
+        const inSample    = calcPeriodStats(isTrades);
+        const outOfSample = calcPeriodStats(oosTrades);
+        const combined    = calcPeriodStats(trades);
 
-      if (!inSample || !combined) { console.log(`insufficient data (${trades.length} trades)`); continue; }
+        if (!inSample || !combined) { console.log(`insufficient data (${trades.length} trades)`); continue; }
 
-      allTrades.push(...trades);
+        allTrades.push(...trades);
 
-      const passes   = meetsCriteria(inSample) && (outOfSample ? meetsCriteria(outOfSample) : false);
-      const strongOOS = !passes && outOfSample !== null && outOfSample.winRate >= 50 && outOfSample.sharpe >= 1.0;
+        const passes    = meetsCriteria(inSample) && (outOfSample ? meetsCriteria(outOfSample) : false);
+        const strongOOS = !passes && outOfSample !== null && outOfSample.winRate >= 50 && outOfSample.sharpe >= 1.0;
 
-      results.push({ instrument, dataYears, inSample, outOfSample, combined, passes, strongOOS });
+        results.push({ instrument, timeframe, dataYears, inSample, outOfSample, combined, passes, strongOOS });
 
-      const v = passes ? "✅" : strongOOS ? "⚠️ " : "❌";
-      const oos = outOfSample ? `OOS: WR=${outOfSample.winRate}% Sharpe=${outOfSample.sharpe}` : "OOS: n/a";
-      console.log(`${v} IS: WR=${inSample.winRate}% Sharpe=${inSample.sharpe} DD=${inSample.maxDrawdown}%  |  ${oos}`);
-    } catch (err) {
-      console.error(`FAILED — ${err instanceof Error ? err.message : err}`);
+        const v = passes ? "✅" : strongOOS ? "⚠️ " : "❌";
+        const oos = outOfSample ? `OOS: WR=${outOfSample.winRate}% Sharpe=${outOfSample.sharpe}` : "OOS: n/a";
+        console.log(`${v} IS: WR=${inSample.winRate}% Sharpe=${inSample.sharpe} DD=${inSample.maxDrawdown}%  |  ${oos}`);
+      } catch (err) {
+        console.error(`FAILED — ${err instanceof Error ? err.message : err}`);
+      }
     }
   }
 
   if (allTrades.length === 0) { console.log("\n⚠️  No trades generated."); process.exit(0); }
 
+  // ── Timeframe summary ──────────────────────────────────────────────────────
+  console.log("\n" + "=".repeat(70));
+  console.log("  TIMEFRAME SUMMARY");
+  console.log("=".repeat(70));
+  console.log(`  ${"TF".padEnd(5)} ${"Pairs".padStart(6)} ${"Trades".padStart(8)} ${"WR".padStart(7)} ${"Sharpe".padStart(8)} ${"DD".padStart(7)} ${"PF".padStart(7)}`);
+  console.log("  " + "-".repeat(52));
+  for (const tf of ALL_TIMEFRAMES) {
+    const tfTrades = allTrades.filter((t) => t.timeframe === tf);
+    const s = calcPeriodStats(tfTrades);
+    if (!s) { console.log(`  ${tf.padEnd(5)} — no data`); continue; }
+    const tfPairs = new Set(tfTrades.map((t) => t.instrument)).size;
+    const v = s.winRate >= 48 && s.sharpe > 0.5 ? "✅" : "❌";
+    console.log(
+      `  ${v} ${tf.padEnd(4)} ${String(tfPairs).padStart(5)} ${String(s.trades).padStart(8)} ` +
+      `${String(s.winRate).padStart(6)}% ${String(s.sharpe).padStart(8)} ${String(s.maxDrawdown).padStart(6)}% ${String(s.profitFactor).padStart(7)}`,
+    );
+  }
+
+  // ── Regime breakdown ───────────────────────────────────────────────────────
   const byRegime: Record<string, Trade[]> = {};
   for (const t of allTrades) (byRegime[t.regime] ??= []).push(t);
 
-  const buys  = allTrades.filter((t) => t.direction === "buy");
-  const sells = allTrades.filter((t) => t.direction === "sell");
-  const buyWR  = buys.filter((t)  => t.outcome === "tp1" || t.outcome === "tp2").length / (buys.length  || 1) * 100;
-  const sellWR = sells.filter((t) => t.outcome === "tp1" || t.outcome === "tp2").length / (sells.length || 1) * 100;
+  console.log("\n" + "=".repeat(70));
+  console.log("  REGIME BREAKDOWN");
+  console.log("=".repeat(70));
+  for (const [regime, ts] of Object.entries(byRegime).sort((a, b) => b[1].length - a[1].length)) {
+    const wins = ts.filter((t) => t.outcome === "tp1" || t.outcome === "tp2" || t.outcome === "tp3").length;
+    const wr   = Math.round(wins / ts.length * 1000) / 10;
+    const avgR = Math.round(ts.reduce((s, t) => s + t.pnlR, 0) / ts.length * 100) / 100;
+    console.log(`  ${regime.padEnd(22)} n=${String(ts.length).padStart(5)} | WR=${String(wr).padStart(5)}% | avgR=${String(avgR).padStart(5)}`);
+  }
 
+  // ── Combined stats + stress test ───────────────────────────────────────────
   const byMonth: Record<string, Trade[]> = {};
   for (const t of allTrades) (byMonth[t.month] ??= []).push(t);
   const monthly = Object.entries(byMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, ts]) => {
-      const wins   = ts.filter((t) => t.outcome === "tp1" || t.outcome === "tp2").length;
+      const wins   = ts.filter((t) => t.outcome === "tp1" || t.outcome === "tp2" || t.outcome === "tp3").length;
       const totalR = ts.reduce((s, t) => s + t.pnlR, 0);
       return { month, trades: ts.length, wins, winRate: Math.round(wins/ts.length*1000)/10, totalR: Math.round(totalR*100)/100 };
     });
@@ -350,49 +382,10 @@ async function run() {
   const var95   = sorted[Math.floor(sorted.length * 0.05)] ?? 0;
   const profitableMonths = monthly.filter((m) => m.totalR > 0).length;
 
-  console.log("\n" + "=".repeat(70));
-  console.log("  PAIR RESULTS — IN-SAMPLE vs OUT-OF-SAMPLE");
-  console.log("=".repeat(70));
-  console.log(`  ${"Pair".padEnd(10)} ${"IS WR".padStart(7)} ${"IS Sharpe".padStart(10)} ${"IS DD".padStart(7)} ${"OOS WR".padStart(8)} ${"OOS Sharpe".padStart(11)} ${"OOS DD".padStart(8)}`);
-  console.log("  " + "-".repeat(68));
-  for (const r of results) {
-    const v = r.passes ? "✅" : r.strongOOS ? "⚠️ " : "❌";
-    const oos = r.outOfSample;
-    console.log(
-      `  ${v} ${r.instrument.padEnd(9)} ` +
-      `${String(r.inSample.winRate).padStart(6)}% ` +
-      `${String(r.inSample.sharpe).padStart(9)}  ` +
-      `${String(r.inSample.maxDrawdown).padStart(6)}%  ` +
-      `${oos ? String(oos.winRate).padStart(7)+"%" : "    n/a"}  ` +
-      `${oos ? String(oos.sharpe).padStart(10) : "       n/a"}  ` +
-      `${oos ? String(oos.maxDrawdown).padStart(7)+"%" : "    n/a"}`,
-    );
-  }
-
-  console.log("\n" + "=".repeat(70));
-  console.log("  REGIME BREAKDOWN");
-  console.log("=".repeat(70));
-  for (const [regime, ts] of Object.entries(byRegime).sort((a, b) => b[1].length - a[1].length)) {
-    const wins = ts.filter((t) => t.outcome === "tp1" || t.outcome === "tp2").length;
-    const wr   = Math.round(wins / ts.length * 1000) / 10;
-    const avgR = Math.round(ts.reduce((s, t) => s + t.pnlR, 0) / ts.length * 100) / 100;
-    console.log(`  ${regime.padEnd(22)} n=${String(ts.length).padStart(5)} | WR=${String(wr).padStart(5)}% | avgR=${String(avgR).padStart(5)} | ${"#".repeat(Math.round(wr / 5))}`);
-  }
-
-  console.log("\n" + "=".repeat(70));
-  console.log("  DIRECTION ANALYSIS");
-  console.log("=".repeat(70));
-  console.log(`  BUY  signals: ${buys.length.toString().padStart(5)} | Win rate: ${buyWR.toFixed(1)}%`);
-  console.log(`  SELL signals: ${sells.length.toString().padStart(5)} | Win rate: ${sellWR.toFixed(1)}%`);
-
-  console.log("\n" + "=".repeat(70));
-  console.log("  MONTHLY RESULTS");
-  console.log("=".repeat(70));
-  for (const m of monthly) {
-    const sign = m.totalR >= 0 ? "+" : "";
-    const flag = m.totalR >= 0 ? "  " : "XX";
-    console.log(`  ${flag} ${m.month}  ${String(m.trades).padStart(5)}  ${String(m.winRate).padStart(5)}%  ${sign}${String(m.totalR).padStart(8)}R`);
-  }
+  const combinedStats = calcPeriodStats(allTrades)!;
+  const oosStats      = calcPeriodStats(allTrades.filter((t) => t.period === "out-of-sample"));
+  const passingPairs  = results.filter((r) => r.passes);
+  const strongOOSPairs = results.filter((r) => r.strongOOS);
 
   console.log("\n" + "=".repeat(70));
   console.log("  STRESS TEST");
@@ -400,11 +393,6 @@ async function run() {
   console.log(`  Worst consecutive losses:  ${worstStreak}  ${worstStreak <= 12 ? "OK" : "FAIL"} (need <=12)`);
   console.log(`  VaR 95% per trade:         ${(var95 * 100).toFixed(2)}%`);
   console.log(`  Profitable months:         ${profitableMonths}/${monthly.length} (${(profitableMonths/monthly.length*100).toFixed(0)}%)  ${profitableMonths/monthly.length >= 0.55 ? "OK" : "FAIL"} (need >=55%)`);
-
-  const passingPairs  = results.filter((r) => r.passes);
-  const strongOOSPairs = results.filter((r) => r.strongOOS);
-  const combinedStats = calcPeriodStats(allTrades)!;
-  const oosStats      = calcPeriodStats(allTrades.filter((t) => t.period === "out-of-sample"));
 
   const ready =
     passingPairs.length >= 2 &&
@@ -418,7 +406,7 @@ async function run() {
   console.log("\n" + "=".repeat(70));
   console.log("  LIVE READINESS VERDICT");
   console.log("=".repeat(70));
-  console.log(`  Pairs passing IS+OOS:    ${passingPairs.length}/8   ${passingPairs.length >= 2 ? "OK" : "FAIL"} (need >=2)`);
+  console.log(`  Combos passing IS+OOS:   ${passingPairs.length}/${results.length}  ${passingPairs.length >= 2 ? "OK" : "FAIL"} (need >=2)`);
   console.log(`  Combined win rate:       ${combinedStats.winRate}%  ${combinedStats.winRate >= 48 ? "OK" : "FAIL"} (need >=48%)`);
   console.log(`  Combined Sharpe:         ${combinedStats.sharpe}   ${combinedStats.sharpe >= 0.5 ? "OK" : "FAIL"} (need >=0.5)`);
   console.log(`  Max drawdown:            ${combinedStats.maxDrawdown}%  ${combinedStats.maxDrawdown < 26 ? "OK" : "FAIL"} (need <26%)`);
@@ -431,16 +419,16 @@ async function run() {
 
   console.log(`\n  VERDICT: ${ready ? "READY FOR LIVE TRADING" : "NOT READY — see failing checks above"}`);
 
-  if (ready) {
-    console.log(`\n  APPROVED FOR LIVE TRADING (pass both IS + OOS):`);
+  if (passingPairs.length > 0) {
+    console.log(`\n  APPROVED COMBOS (pass both IS + OOS):`);
     for (const r of passingPairs) {
-      console.log(`    OK ${r.instrument} H4 — WR ${r.combined.winRate}% | Sharpe ${r.combined.sharpe} | DD ${r.combined.maxDrawdown}%`);
+      console.log(`    ✅ ${r.instrument} ${r.timeframe} — WR ${r.combined.winRate}% | Sharpe ${r.combined.sharpe} | DD ${r.combined.maxDrawdown}%`);
     }
-    if (strongOOSPairs.length > 0) {
-      console.log(`\n  PAPER TRADE FIRST (strong OOS but weak IS — monitor 30 days):`);
-      for (const r of strongOOSPairs) {
-        console.log(`    WATCH ${r.instrument} H4 — OOS WR ${r.outOfSample!.winRate}% | OOS Sharpe ${r.outOfSample!.sharpe}`);
-      }
+  }
+  if (strongOOSPairs.length > 0) {
+    console.log(`\n  PAPER TRADE FIRST (strong OOS, weak IS):`);
+    for (const r of strongOOSPairs) {
+      console.log(`    ⚠️  ${r.instrument} ${r.timeframe} — OOS WR ${r.outOfSample!.winRate}% | OOS Sharpe ${r.outOfSample!.sharpe}`);
     }
   }
 
