@@ -15,18 +15,26 @@ import { sanityCheckExpert, applySanityCap } from "../experts/sanity-check.js";
 import { runDeliberation } from "./deliberation.js";
 import { calculateSignalLevels, getQualityTag } from "./tp-sl-engine.js";
 import { generateNarrative } from "./narrative-generator.js";
+import { checkMonthlyRiskGuard } from "./monthly-risk-guard.js";
 import { cacheSet, CacheKeys } from "../../redis.js";
 import type { Direction, Regime } from "@apex/types";
 import type { OHLCV } from "../indicators/indicator-engine.js";
 import type { ExpertOutput } from "../experts/types.js";
 
 const MIN_CANDLES = 210;
-const CONFIDENCE_THRESHOLD = Number(process.env.SIGNAL_CONFIDENCE_THRESHOLD ?? 60);
+const CONFIDENCE_THRESHOLD = Number(process.env.SIGNAL_CONFIDENCE_THRESHOLD ?? 65);
 
 export async function runSignalPipeline(
   instrument: string,
   timeframe: string,
 ): Promise<{ fired: boolean; reason: string }> {
+
+  // ── 0. MONTHLY RISK GUARD ─────────────────────────────────────────────────
+  const monthlyGuard = await checkMonthlyRiskGuard();
+  if (!monthlyGuard.allowed) {
+    console.log(`[Pipeline] ${instrument} BLOCKED — ${monthlyGuard.reason}`);
+    return { fired: false, reason: monthlyGuard.reason! };
+  }
 
   // ── 1. FETCH candles ──────────────────────────────────────────────────────
   const rows = await tsdb
@@ -99,8 +107,10 @@ export async function runSignalPipeline(
 
   // ── 12-13. CONSENSUS with sanity cap ──────────────────────────────────────
   // breakout_imminent uses lower threshold — regime itself is the primary signal
-  const consensusThreshold = regimeResult.regime === "breakout_imminent" ? 40
-    : regimeResult.regime === "volatile" ? 55
+  // ranging/volatile require higher bar — these are the regimes that caused bad months
+  const consensusThreshold = regimeResult.regime === "breakout_imminent" ? 45
+    : regimeResult.regime === "volatile" ? 65
+    : regimeResult.regime === "ranging" ? 65
     : 60;
 
   let buyScore = 0, sellScore = 0;

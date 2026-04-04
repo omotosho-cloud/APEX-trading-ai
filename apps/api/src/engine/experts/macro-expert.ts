@@ -29,12 +29,14 @@ export function macroExpert(
   if (regime === "trending_bear") { bearScore += 25; reasons.push("trending bear regime"); }
   if (regime === "ranging") { bullScore += 5; bearScore += 5; }
 
-  // EMA200 macro trend
-  const lastClose = indicators.ema20; // proxy for current price
+  // EMA200 macro trend — weight by distance from price (closer = weaker signal)
+  const lastClose = indicators.ema20;
+  const ema200Dist = Math.abs(lastClose - indicators.ema200) / (indicators.ema200 || 1);
+  const ema200Weight = Math.min(30, Math.round(10 + ema200Dist * 2000)); // 10-30 pts based on distance
   if (lastClose > indicators.ema200) {
-    bullScore += 20; reasons.push("above EMA200 macro uptrend");
+    bullScore += ema200Weight; reasons.push(`above EMA200 (+${ema200Weight})`);
   } else {
-    bearScore += 20; reasons.push("below EMA200 macro downtrend");
+    bearScore += ema200Weight; reasons.push(`below EMA200 (+${ema200Weight})`);
   }
 
   // Hurst persistence
