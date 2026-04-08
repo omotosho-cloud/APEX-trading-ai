@@ -8,26 +8,26 @@ export function sanityCheckExpert(
 ): SanityCheck {
   const rsi = indicators.rsi;
 
-  // Extreme overbought — hard block on buy
-  if (direction === "buy" && rsi > 78) {
+  // Extreme overbought — buying here is dangerous
+  if (direction === "buy" && rsi > 75) {
     return {
       divergence_warning: true,
       distribution_signal: "bearish",
-      reason: `HTF RSI at ${rsi.toFixed(0)} (extreme overbought — hard block)`,
+      reason: `HTF RSI at ${rsi.toFixed(0)} (extreme overbought)`,
     };
   }
 
-  // Extreme oversold — hard block on sell
-  if (direction === "sell" && rsi < 22) {
+  // Extreme oversold — selling here is dangerous
+  if (direction === "sell" && rsi < 25) {
     return {
       divergence_warning: true,
       distribution_signal: "bullish",
-      reason: `HTF RSI at ${rsi.toFixed(0)} (extreme oversold — hard block)`,
+      reason: `HTF RSI at ${rsi.toFixed(0)} (extreme oversold)`,
     };
   }
 
-  // MACD divergence at elevated RSI — meaningful conflict
-  if (direction === "buy" && indicators.macdHistogram < 0 && indicators.rsi > 62) {
+  // MACD divergence — price making new extreme but MACD weakening
+  if (direction === "buy" && indicators.macdHistogram < 0 && indicators.rsi > 65) {
     return {
       divergence_warning: true,
       distribution_signal: "bearish",
@@ -35,7 +35,7 @@ export function sanityCheckExpert(
     };
   }
 
-  if (direction === "sell" && indicators.macdHistogram > 0 && indicators.rsi < 38) {
+  if (direction === "sell" && indicators.macdHistogram > 0 && indicators.rsi < 35) {
     return {
       divergence_warning: true,
       distribution_signal: "bullish",
@@ -62,8 +62,7 @@ export function applySanityCap(
     (direction === "sell" && sanity.distribution_signal === "bullish");
 
   if (isConflict) {
-    // Hard block — return confidence below threshold so pipeline rejects it
-    return { confidence: 0, capped: true };
+    return { confidence: Math.min(confidence, 50), capped: true };
   }
 
   return { confidence, capped: false };

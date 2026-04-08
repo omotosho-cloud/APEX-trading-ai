@@ -15,12 +15,12 @@ type SignalLevels = {
 };
 
 const ATR_MULTIPLIERS: Record<Regime, { sl: number; tp1: number; tp2: number; tp3: number | null }> = {
-  ranging:           { sl: 1.2, tp1: 1.2, tp2: 2.4, tp3: 3.6 },
-  trending_bull:     { sl: 1.5, tp1: 2.0, tp2: 3.5, tp3: 5.5 },
-  trending_bear:     { sl: 1.5, tp1: 2.0, tp2: 3.5, tp3: 5.5 },
-  breakout_imminent: { sl: 2.0, tp1: 2.5, tp2: 4.5, tp3: 7.0 },
-  volatile:          { sl: 2.5, tp1: 1.5, tp2: 2.5, tp3: null },
-  choppy:            { sl: 1.5, tp1: 2.0, tp2: 3.5, tp3: 5.5 },
+  ranging:           { sl: 1.2, tp1: 1.0, tp2: 2.0, tp3: 3.0 },
+  trending_bull:     { sl: 1.5, tp1: 1.5, tp2: 3.0, tp3: 5.0 },
+  trending_bear:     { sl: 1.5, tp1: 1.5, tp2: 3.0, tp3: 5.0 },
+  breakout_imminent: { sl: 2.0, tp1: 2.0, tp2: 4.0, tp3: 6.5 },
+  volatile:          { sl: 2.5, tp1: 1.2, tp2: 2.0, tp3: null },
+  choppy:            { sl: 1.5, tp1: 1.5, tp2: 3.0, tp3: 5.0 },
 };
 
 const TF_MULTIPLIER: Record<string, number> = {
@@ -61,8 +61,9 @@ export function calculateSignalLevels(
   const validityHours = Math.min(24, (atr * 2) / (atr / 4));
   const validUntil = new Date(Date.now() + validityHours * 3_600_000);
 
-  // Minimum RR at TP1 — 1.2 minimum, real edge is at TP2/TP3
-  const minRR = 1.2;
+  // Minimum RR at TP1 — trending SL=1.5x TP1=1.5x gives RR=1.0 by design
+  // Real edge is at TP2 (2.0 RR) and TP3 (3.3 RR)
+  const minRR = 0.9;
 
   return {
     entryPrice,
