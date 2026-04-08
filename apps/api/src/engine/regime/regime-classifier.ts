@@ -69,16 +69,15 @@ export function classifyRaw(
     };
   }
 
-  // Priority 3: Confirmed trend — require structureScore >= 7 (clear HH/HL or LL/LH, not just expanding)
-  if (adx > 25 && structureScore >= 7) {
-    let conf = Math.min(92, 55 + Math.floor((adx - 25) * 1.5) + (structureScore - 7) * 5);
+  // Priority 3: Confirmed trend with fractal validation
+  if (adx > 25 && structureScore >= 6) {
+    let conf = Math.min(92, 55 + Math.floor((adx - 25) * 1.5) + (structureScore - 6) * 4);
 
-    // Both Hurst AND efficiency required for full confidence boost
-    if (hurst > 0.55 && efficiencyRatio > 0.60) conf = Math.min(95, conf + 10);
+    if (hurst > 0.55 && efficiencyRatio > 0.60) conf = Math.min(95, conf + 8);
     else if (hurst > 0.55) conf = Math.min(95, conf + 4);
-    else if (hurst < 0.45) conf = Math.max(45, conf - 15); // stronger penalty
+    else if (hurst < 0.45) conf = Math.max(50, conf - 12);
 
-    // structureScore 7-9 = bull, 1-3 = bear only — score 6 no longer reaches here
+    // structureScore 7-9 = bull, 1-3 = bear, 6 = expanding (use DI to decide)
     const regime: Regime = structureScore >= 7
       ? "trending_bull"
       : structureScore <= 3
@@ -89,15 +88,14 @@ export function classifyRaw(
   }
 
   // Priority 4: Confirmed range — contracting structure (score 4) or flat (score 5) with low ADX
-  // Also catch adx 25-30 with weak Hurst — transitional markets that look trending but aren't
-  if ((adx < 25 && hurst < 0.52 && structureScore <= 5) || (adx < 30 && hurst < 0.45 && structureScore <= 6)) {
+  if (adx < 25 && hurst < 0.52 && structureScore <= 5) {
     return {
       regime: "ranging",
-      confidence: Math.min(90, 60 + Math.floor((25 - Math.min(adx, 25)) * 1.2) + (5 - Math.min(structureScore, 5)) * 3),
+      confidence: Math.min(90, 60 + Math.floor((25 - adx) * 1.2) + (5 - structureScore) * 3),
     };
   }
 
-  // Default: choppy — anything that doesn't clearly fit above
+  // Default: choppy
   return { regime: "choppy", confidence: Math.max(30, 50 - Math.floor(adx)) };
 }
 
