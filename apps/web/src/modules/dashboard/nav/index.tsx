@@ -46,9 +46,10 @@ export default function DashboardNav({ lastUpdated, isLive = true }: DashboardNa
 
       <nav className="hidden md:flex items-center gap-1 text-sm">
         {[
-          { href: "/dashboard",          label: "Signals" },
-          { href: "/dashboard/watchlist", label: "Watchlist" },
-          { href: "/dashboard/history",   label: "History" },
+          { href: "/dashboard",                  label: "Signals" },
+          { href: "/dashboard/watchlist",          label: "Watchlist" },
+          { href: "/dashboard/history",            label: "History" },
+          { href: "/dashboard/paper-trading",      label: "Paper Trade" },
         ].map((item) => (
           <Link
             key={item.href}
