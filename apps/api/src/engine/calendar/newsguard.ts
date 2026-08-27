@@ -2,6 +2,7 @@ import { db } from "../../db/client.js";
 import { calendarEvents } from "../../db/schema/index.js";
 import { sql } from "drizzle-orm";
 import { cacheGet, cacheSet } from "../../redis.js";
+import { isSyntheticInstrument } from "../market-data/instruments.js";
 
 const RED_FOLDER_EVENTS = [
   "NFP", "Non-Farm", "CPI", "FOMC", "GDP",
@@ -30,6 +31,12 @@ export type NewsGuardResult = {
 };
 
 export async function checkNewsGuard(instrument: string): Promise<NewsGuardResult> {
+  // Synthetic indices are algorithmically generated — they are not affected by
+  // economic news events. Skip the calendar check entirely.
+  if (isSyntheticInstrument(instrument)) {
+    return { suppressed: false, reason: null, eventTitle: null };
+  }
+
   const cacheKey = `newsguard:${instrument}`;
   const cached = await cacheGet<NewsGuardResult>(cacheKey);
   if (cached) return cached;

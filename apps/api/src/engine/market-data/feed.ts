@@ -1,6 +1,9 @@
 import { CandleAggregator } from "./candle-aggregator.js";
-import { startBinanceFeed } from "./binance-feed.js";
 import { startTwelveDataFeed } from "./twelve-data-feed.js";
+// Deriv feed disabled — only trading forex pairs now
+// import { startDerivFeed } from "./deriv-feed.js";
+// Binance feed disabled — crypto not active
+// import { startBinanceFeed } from "./binance-feed.js";
 import { writeCandle } from "./candle-writer.js";
 import type { OHLCVCandle } from "./candle-aggregator.js";
 
@@ -10,10 +13,7 @@ export function startRealTimeFeed(onCandleClose?: CandleHandler) {
   const aggregator = new CandleAggregator();
 
   aggregator.on("candle", async (candle: OHLCVCandle) => {
-    // 1. Persist to DB
     await writeCandle(candle);
-
-    // 2. Trigger downstream handler (signal pipeline) if provided
     if (onCandleClose) {
       await onCandleClose(candle).catch((err) =>
         console.error("[Feed] onCandleClose error:", err),
@@ -21,11 +21,10 @@ export function startRealTimeFeed(onCandleClose?: CandleHandler) {
     }
   });
 
+  // ── Forex (primary — all major and minor pairs via TwelveData) ────────────
   const stopTwelveData = startTwelveDataFeed(aggregator);
-  // Binance disabled — only trading forex pairs
-  // const stopBinance = startBinanceFeed(aggregator);
 
-  console.log("[Feed] Real-time feed started — TwelveData (forex)");
+  console.log("[Feed] Real-time feed started — TwelveData (forex major + minor pairs)");
 
   return () => {
     stopTwelveData();

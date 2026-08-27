@@ -6,4 +6,4 @@ export type ExpertOutput = {
   reasoning: string;
 };
 
-export type ExpertName = "technical" | "smart_money" | "sentiment" | "macro" | "quant";
+export type ExpertName = "technical" | "macro" | "quant" | "htf_fvg" | "multi_tf" | "pullback_poi";

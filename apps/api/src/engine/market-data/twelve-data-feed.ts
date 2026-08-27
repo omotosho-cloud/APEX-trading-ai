@@ -14,9 +14,21 @@ export function startTwelveDataFeed(aggregator: CandleAggregator) {
   let reconnectTimer: NodeJS.Timeout;
   let heartbeatTimer: NodeJS.Timeout;
 
-  // Only subscribe to active trading pairs
-  const ACTIVE_FOREX = ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "NZDUSD"];
-  const symbols = ACTIVE_FOREX.map((i) => TWELVE_DATA_SYMBOL[i]).filter(Boolean);
+  // Subscribe to all major + minor pairs
+  // TwelveData free tier allows 8 symbols on WebSocket — subscribe to majors first
+  // then minors if the plan supports it. Adjust ACTIVE_FOREX based on your plan.
+  const ACTIVE_FOREX = [
+    // Majors (7) — always included
+    "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD",
+    // Minors — add based on TwelveData plan (comment out if hitting symbol limit)
+    "EURGBP", "EURJPY", "GBPJPY",
+    "AUDJPY", "CADJPY", "CHFJPY",
+    "EURCHF", "EURAUD", "EURCAD",
+    "GBPCHF", "GBPAUD", "GBPCAD",
+  ];
+  const symbols = ACTIVE_FOREX
+    .map((i) => TWELVE_DATA_SYMBOL[i])
+    .filter((s): s is string => s !== undefined);
 
   function connect() {
     const url = getWebSocketUrl();

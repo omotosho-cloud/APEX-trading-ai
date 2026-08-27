@@ -1,50 +1,72 @@
-import type { Regime } from "@apex/types";
+import { isForexInstrument, isMajorPair, isSyntheticInstrument } from "./market-data/instruments.js";
+
+type Regime = "trending_bull" | "trending_bear" | "ranging" | "breakout_imminent" | "volatile" | "choppy";
 
 export const BASE_WEIGHTS = {
-  technical:   0.35,
-  smart_money: 0.20,
-  sentiment:   0.15,
-  macro:       0.15,
-  quant:       0.15,
+  htf_fvg:      0.30,
+  multi_tf:     0.30,
+  pullback_poi: 0.25,
+  technical:    0.08,
+  macro:        0.04,
+  quant:        0.03,
 };
 
-// Mirrors gating-network.ts adjustments — no Redis, no bench rule (deterministic)
 export function getRegimeWeights(
-  regime: Regime,
-  timeframe: string,
+  regime:     Regime,
+  timeframe:  string,
   instrument: string,
 ): Partial<typeof BASE_WEIGHTS> {
   const adj: Partial<typeof BASE_WEIGHTS> = {};
 
   if (regime === "trending_bull" || regime === "trending_bear") {
-    adj.technical   = +0.10;
-    adj.macro       = +0.05;
-    adj.sentiment   = -0.05;
-    adj.smart_money = -0.10;
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) + 0.03;
+    adj.multi_tf     = (adj.multi_tf     ?? 0) + 0.02;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.02;
+    adj.technical    = (adj.technical    ?? 0) + 0.02;
+    adj.macro        = (adj.macro        ?? 0) - 0.03;
+    adj.quant        = (adj.quant        ?? 0) - 0.06;
   }
   if (regime === "ranging") {
-    adj.technical   = +0.10;
-    adj.smart_money = +0.05;
-    adj.macro       = -0.10;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.03;
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) - 0.02;
+    adj.macro        = (adj.macro        ?? 0) - 0.01;
   }
   if (regime === "volatile") {
-    adj.macro       = +0.15;
-    adj.sentiment   = +0.10;
-    adj.technical   = -0.15;
-    adj.smart_money = -0.10;
+    adj.macro        = (adj.macro        ?? 0) + 0.05;
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) - 0.03;
+    adj.multi_tf     = (adj.multi_tf     ?? 0) - 0.02;
   }
-  if (["M5","M15"].includes(timeframe)) {
-    adj.macro      = (adj.macro      ?? 0) - 0.10;
-    adj.technical  = (adj.technical  ?? 0) + 0.10;
+  if (["M5", "M15"].includes(timeframe)) {
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) + 0.03;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.02;
+    adj.macro        = (adj.macro        ?? 0) - 0.05;
   }
-  if (["D1","W1"].includes(timeframe)) {
-    adj.macro  = (adj.macro  ?? 0) + 0.10;
-    adj.quant  = (adj.quant  ?? 0) + 0.05;
+  if (["H4", "D1", "W1"].includes(timeframe)) {
+    adj.macro        = (adj.macro        ?? 0) + 0.05;
+    adj.quant        = (adj.quant        ?? 0) + 0.03;
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) - 0.03;
   }
-  if (["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT"].includes(instrument)) {
-    adj.sentiment   = (adj.sentiment   ?? 0) + 0.10;
-    adj.macro       = (adj.macro       ?? 0) - 0.05;
-    adj.smart_money = (adj.smart_money ?? 0) - 0.05;
+  if (isForexInstrument(instrument) && isMajorPair(instrument)) {
+    adj.macro        = (adj.macro        ?? 0) + 0.03;
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) + 0.01;
+    adj.multi_tf     = (adj.multi_tf     ?? 0) + 0.01;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.01;
+    adj.quant        = (adj.quant        ?? 0) - 0.06;
+  }
+  if (isForexInstrument(instrument) && !isMajorPair(instrument)) {
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) + 0.02;
+    adj.multi_tf     = (adj.multi_tf     ?? 0) + 0.02;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.02;
+    adj.technical    = (adj.technical    ?? 0) + 0.02;
+    adj.macro        = (adj.macro        ?? 0) - 0.04;
+    adj.quant        = (adj.quant        ?? 0) - 0.04;
+  }
+  if (isSyntheticInstrument(instrument)) {
+    adj.htf_fvg      = (adj.htf_fvg      ?? 0) + 0.05;
+    adj.multi_tf     = (adj.multi_tf     ?? 0) + 0.03;
+    adj.pullback_poi = (adj.pullback_poi ?? 0) + 0.02;
+    adj.macro        = (adj.macro        ?? 0) - 0.05;
+    adj.quant        = (adj.quant        ?? 0) - 0.05;
   }
 
   return adj;

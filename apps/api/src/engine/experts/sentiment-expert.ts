@@ -2,6 +2,7 @@ import axios from "axios";
 import type { ExpertOutput } from "./types.js";
 import type { IndicatorResult } from "../indicators/indicator-engine.js";
 import { cacheGet, cacheSet } from "../../redis.js";
+import { isSyntheticInstrument, isCryptoInstrument } from "../market-data/instruments.js";
 
 type FearGreedResponse = {
   data: Array<{ value: string; value_classification: string }>;
@@ -24,15 +25,18 @@ async function fetchFearGreedIndex(): Promise<number> {
   }
 }
 
-const CRYPTO_INSTRUMENTS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"];
-
 export async function sentimentExpert(
   instrument: string,
   indicators: IndicatorResult,
 ): Promise<ExpertOutput> {
-  const isCrypto = CRYPTO_INSTRUMENTS.includes(instrument);
+  // Synthetic indices are algorithmically generated — crowd sentiment signals
+  // (Fear & Greed index, COT, Reddit volume) carry no predictive edge here.
+  // Return neutral with low confidence so the gating network ignores this expert.
+  if (isSyntheticInstrument(instrument)) {
+    return { direction: "neutral", confidence: 40, reasoning: "sentiment not applicable to synthetic instruments" };
+  }
 
-  if (isCrypto) {
+  if (isCryptoInstrument(instrument)) {
     const fgi = await fetchFearGreedIndex();
     // FGI: 0-24 extreme fear (buy), 25-44 fear (buy bias), 45-55 neutral,
     //      56-75 greed (sell bias), 76-100 extreme greed (sell)

@@ -1,6 +1,7 @@
 import type { ExpertOutput } from "./types.js";
 import type { IndicatorResult } from "../indicators/indicator-engine.js";
 import type { Regime } from "@apex/types";
+import { isSyntheticInstrument } from "../market-data/instruments.js";
 
 // USD-positive pairs (DXY up = these go down)
 const USD_POSITIVE = ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD", "XRPUSDT"];
@@ -15,6 +16,13 @@ export function macroExpert(
   indicators: IndicatorResult,
   regime: Regime,
 ): ExpertOutput {
+  // Synthetic indices are algorithmically generated — macroeconomic factors
+  // (DXY, bond yields, risk-on/off) have no bearing on their price action.
+  // Return neutral with low confidence so this expert is effectively ignored
+  // by the gating network (which already down-weights macro for synthetics).
+  if (isSyntheticInstrument(instrument)) {
+    return { direction: "neutral", confidence: 40, reasoning: "macro not applicable to synthetic instruments" };
+  }
   // Macro is most relevant on higher timeframes
   const htfWeight = ["D1", "W1"].includes(timeframe) ? 1.3
     : ["H4"].includes(timeframe) ? 1.1

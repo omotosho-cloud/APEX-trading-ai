@@ -2,26 +2,28 @@ import { tsdb, db } from "../../db/client.js";
 import { candles, signals } from "../../db/schema/index.js";
 import { and, eq, desc } from "drizzle-orm";
 import { calculateIndicators } from "../indicators/indicator-engine.js";
-import { classifyRegime, detectSession } from "../regime/regime-classifier.js";
+import { classifyRegime } from "../regime/regime-classifier.js";
 import { checkNewsGuard } from "../calendar/newsguard.js";
 import { checkCorrelationLimit } from "./correlation-check.js";
 import { getGatingWeights } from "../experts/gating-network.js";
 import { technicalExpert } from "../experts/technical-expert.js";
-import { smartMoneyExpert } from "../experts/smart-money-expert.js";
-import { sentimentExpert } from "../experts/sentiment-expert.js";
 import { macroExpert } from "../experts/macro-expert.js";
 import { quantExpert } from "../experts/quant-expert.js";
+import { htfFvgExpert } from "../experts/htf-fvg-expert.js";
+import { multiTfExpert } from "../experts/multi-tf-expert.js";
+import { pullbackPoiExpert } from "../experts/pullback-poi-expert.js";
 import { sanityCheckExpert, applySanityCap } from "../experts/sanity-check.js";
 import { runDeliberation } from "./deliberation.js";
 import { calculateSignalLevels, getQualityTag } from "./tp-sl-engine.js";
 import { generateNarrative } from "./narrative-generator.js";
 import { cacheSet, CacheKeys } from "../../redis.js";
-import type { Direction, Regime } from "@apex/types";
+import { isSyntheticInstrument } from "../market-data/instruments.js";
+import type { Direction } from "@apex/types";
 import type { OHLCV } from "../indicators/indicator-engine.js";
 import type { ExpertOutput } from "../experts/types.js";
 
 const MIN_CANDLES = 210;
-const CONFIDENCE_THRESHOLD = Number(process.env.SIGNAL_CONFIDENCE_THRESHOLD ?? 60);
+const CONFIDENCE_THRESHOLD = Number(process.env.SIGNAL_CONFIDENCE_THRESHOLD ?? 50);
 
 export async function runSignalPipeline(
   instrument: string,
@@ -47,6 +49,47 @@ export async function runSignalPipeline(
   }));
 
   const currentPrice = bars[bars.length - 1]!.close;
+
+  // ── Fetch H1 bars for HTF structure analysis ─────────────────────────────
+  // 80 H1 bars = ~3.3 days of entry-level context — recent leg only
+  const h1Rows = await tsdb
+    .select()
+    .from(candles)
+    .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, "H1")))
+    .orderBy(desc(candles.time))
+    .limit(80);
+
+  const h1Bars: OHLCV[] = h1Rows.reverse().map((r) => ({
+    open: parseFloat(r.open), high: parseFloat(r.high),
+    low: parseFloat(r.low),   close: parseFloat(r.close),
+    volume: parseFloat(r.volume),
+  }));
+
+  // ── Fetch H4, D1, M30 bars ────────────────────────────────────────────────
+  // H4:  40 bars = ~7 weeks — the recent leg of H4 price action
+  // D1:  65 bars = ~3 months — "if price has been selling for 3 months" rule
+  // M30: 60 bars = ~30 hours — entry-level context only
+  const [h4Rows, d1Rows, m30Rows] = await Promise.all([
+    tsdb.select().from(candles)
+      .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, "H4")))
+      .orderBy(desc(candles.time)).limit(40),
+    tsdb.select().from(candles)
+      .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, "D1")))
+      .orderBy(desc(candles.time)).limit(65),
+    tsdb.select().from(candles)
+      .where(and(eq(candles.instrument, instrument), eq(candles.timeframe, "M30")))
+      .orderBy(desc(candles.time)).limit(60),
+  ]);
+
+  const toOHLCV = (r: typeof h4Rows[number]): OHLCV => ({
+    open: parseFloat(r.open), high: parseFloat(r.high),
+    low: parseFloat(r.low),   close: parseFloat(r.close),
+    volume: parseFloat(r.volume),
+  });
+
+  const h4Bars:  OHLCV[] = h4Rows.reverse().map(toOHLCV);
+  const d1Bars:  OHLCV[] = d1Rows.reverse().map(toOHLCV);
+  const m30Bars: OHLCV[] = m30Rows.reverse().map(toOHLCV);
 
   // ── 2-3. CALCULATE indicators ─────────────────────────────────────────────
   const indicators = calculateIndicators(bars);
@@ -84,17 +127,15 @@ export async function runSignalPipeline(
   const weights = await getGatingWeights(instrument, timeframe, regimeResult.regime);
 
   // ── 11. EXPERT votes (parallel) ───────────────────────────────────────────
-  const [sentimentVote, quantVote] = await Promise.all([
-    sentimentExpert(instrument, indicators),
-    quantExpert(instrument, timeframe, regimeResult.regime, indicators),
-  ]);
+  const quantVote = await quantExpert(instrument, timeframe, regimeResult.regime, indicators);
 
   const expertVotes: Record<string, ExpertOutput> = {
-    technical:   technicalExpert(indicators, regimeResult.regime, currentPrice),
-    smart_money: smartMoneyExpert(bars, indicators, currentPrice, timeframe),
-    sentiment:   sentimentVote,
-    macro:       macroExpert(instrument, timeframe, indicators, regimeResult.regime),
-    quant:       quantVote,
+    technical:    technicalExpert(indicators, regimeResult.regime, currentPrice),
+    macro:        macroExpert(instrument, timeframe, indicators, regimeResult.regime),
+    quant:        quantVote,
+    htf_fvg:      htfFvgExpert(bars, h1Bars, h4Bars),
+    multi_tf:     multiTfExpert(m30Bars, h1Bars, h4Bars, d1Bars),
+    pullback_poi: pullbackPoiExpert(bars, h1Bars),
   };
 
   // ── 12-13. CONSENSUS with sanity cap ──────────────────────────────────────

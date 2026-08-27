@@ -5,9 +5,17 @@ import { candles } from "../db/schema/index.js";
 import { sql } from "drizzle-orm";
 
 const FOREX_PAIRS: Record<string, string> = {
+  // Majors
   EURUSD: "eurusd", GBPUSD: "gbpusd", USDJPY: "usdjpy",
-  USDCHF: "usdchf", AUDUSD: "audusd", NZDUSD: "nzdusd",
-  USDCAD: "usdcad", EURGBP: "eurgbp", EURJPY: "eurjpy", GBPJPY: "gbpjpy",
+  USDCHF: "usdchf", AUDUSD: "audusd", NZDUSD: "nzdusd", USDCAD: "usdcad",
+  // Minors
+  EURGBP: "eurgbp", EURJPY: "eurjpy", EURCHF: "eurchf",
+  EURAUD: "euraud", EURCAD: "eurcad",
+  GBPJPY: "gbpjpy", GBPCHF: "gbpchf", GBPAUD: "gbpaud", GBPCAD: "gbpcad",
+  AUDJPY: "audjpy", CADJPY: "cadjpy", CHFJPY: "chfjpy",
+  AUDNZD: "audnzd", AUDCAD: "audcad", AUDCHF: "audchf",
+  NZDJPY: "nzdjpy", NZDCAD: "nzdcad", NZDCHF: "nzdchf",
+  CADCHF: "cadchf",
 };
 
 const TIMEFRAMES: Record<string, "h1" | "h4" | "d1"> = {
